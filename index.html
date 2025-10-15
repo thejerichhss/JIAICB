@@ -84,7 +84,6 @@
 
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
-
 <script>
 let currentTheme = 'dark';
 
@@ -105,18 +104,47 @@ const themes = {
 function applyTheme(name) {
   const theme = themes[name] || themes.dark;
   currentTheme = name;
-  document.body.style.background = theme.background;
-  document.getElementById('chat').style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
-  document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
-  document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
+
+  const body = document.body;
+  const chat = document.getElementById('chat');
+  const prompt = document.getElementById('prompt');
+
+  [body, chat, prompt].forEach(el => {
+    el.style.transition = 'background 0.4s, color 0.4s';
+  });
+
+  body.style.background = theme.background;
+  chat.style.background = theme.chatBackground;
+  prompt.style.background = theme.inputBackground;
+  prompt.style.color = theme.inputText;
+
+  document.querySelectorAll('.user').forEach(el => {
+    el.style.transition = 'background 0.4s, color 0.4s';
+    el.style.background = theme.userBubble;
+    el.style.color = theme.inputText;
+  });
+  document.querySelectorAll('.ai').forEach(el => {
+    el.style.transition = 'background 0.4s, color 0.4s';
+    el.style.background = theme.aiBubble;
+    el.style.color = theme.inputText;
+  });
+  document.querySelectorAll('.system').forEach(el => {
+    el.style.transition = 'color 0.4s';
+    el.style.color = theme.systemText;
+  });
+
+  const typing = document.getElementById('typing');
+  if (typing) {
+    typing.style.background = theme.aiBubble;
+    typing.style.color = theme.inputText;
+  }
 }
+
 document.getElementById('themeSelector').addEventListener('change', e => {
   applyTheme(e.target.value);
   localStorage.setItem('theme', e.target.value);
 });
+
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme && themes[savedTheme]) {
   applyTheme(savedTheme);
@@ -125,11 +153,13 @@ if (savedTheme && themes[savedTheme]) {
 
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
-
-  const wrapper = document.createElement('div');
-  wrapper.style.display = 'flex';
-  wrapper.style.width = '100%';
-  wrapper.style.justifyContent = cls === 'user' ? 'flex-end' : 'flex-start';
+  const msgWrapper = document.createElement('div');
+  msgWrapper.style.display = 'flex';
+  msgWrapper.style.flexDirection = 'column';
+  msgWrapper.style.width = '100%';
+  msgWrapper.style.marginBottom = '0.25em';
+  if (cls === 'user') msgWrapper.style.alignItems = 'flex-end';
+  else if (cls === 'ai') msgWrapper.style.alignItems = 'flex-start';
 
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
@@ -146,9 +176,18 @@ function addMessage(sender, text, cls) {
     msg.style.color = theme.systemText;
   }
 
-  wrapper.appendChild(msg);
-  chat.appendChild(wrapper);
+  msg.style.opacity = '0';
+  msg.style.transform = 'translateY(10px)';
+  msg.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+
+  msgWrapper.appendChild(msg);
+  chat.appendChild(msgWrapper);
   chat.scrollTop = chat.scrollHeight;
+
+  requestAnimationFrame(() => {
+    msg.style.opacity = '1';
+    msg.style.transform = 'translateY(0)';
+  });
 }
 
 function showTyping() {
@@ -156,26 +195,26 @@ function showTyping() {
     const t = document.createElement('div');
     t.id = 'typing';
     t.className = 'message ai';
-    t.innerHTML = `<b>AI:</b> <span class="messageText">Typing...</span>`;
+    t.textContent = 'AI is typing...';
 
     const theme = themes[currentTheme] || themes.dark;
     t.style.background = theme.aiBubble;
     t.style.color = theme.inputText;
 
-    const wrapper = document.createElement('div');
-    wrapper.style.display = 'flex';
-    wrapper.style.width = '100%';
-    wrapper.style.justifyContent = 'flex-start';
-    wrapper.appendChild(t);
+    t.style.opacity = '0';
+    t.style.transition = 'opacity 0.3s ease';
+    document.getElementById('chat').appendChild(t);
 
-    document.getElementById('chat').appendChild(wrapper);
-    document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
+    requestAnimationFrame(() => t.style.opacity = '1');
   }
 }
 
 function hideTyping() {
   const t = document.getElementById('typing');
-  if (t) t.remove();
+  if (t) {
+    t.style.opacity = '0';
+    setTimeout(() => t.remove(), 300);
+  }
 }
 
 async function sendMessage() {
@@ -185,6 +224,7 @@ async function sendMessage() {
   addMessage('You', text, 'user');
   prompt.value = '';
   showTyping();
+
   try {
     const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
     const reply = await res.text();
