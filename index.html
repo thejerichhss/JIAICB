@@ -36,41 +36,9 @@
   background: #222;
   color: #fff;
 }
-
 </style>
-</head>
-<body>
-<input id="searchBar" type="text" placeholder="Search messages..." />
-<select id="themeSelector">
-  <optgroup label="Classic Themes">
-    <option value="dark">Dark</option>
-    <option value="light">Light</option>
-    <option value="sunset">Sunset</option>
-  </optgroup>
-  <optgroup label="Color Themes">
-    <option value="red">Red</option>
-    <option value="orange">Orange</option>
-    <option value="yellow">Yellow</option>
-    <option value="green">Green</option>
-    <option value="teal">Teal</option>
-    <option value="blue">Blue</option>
-    <option value="purple">Purple</option>
-    <option value="pink">Pink</option>
-  </optgroup>
-</select>
-<div id="chat" role="log" aria-live="polite"></div>
-
-<div id="inputArea">
-  <input id="prompt" type="text" placeholder="Type your message..." autocomplete="off" />
-  <button id="sendBtn">Send</button>
-  <button id="clearMemory" title="Clear server memory">Clear Memory</button>
-  <button id="historyBtn">History</button>
-</div>
-<iframe id="historyFrame"></iframe>
-<button id="closeHistory">Close History</button>
 <script>
 let currentTheme = 'dark';
-let typingInterval = null;
 
 /* --- Utility functions --- */
 function decodeEntities(encodedStr) {
@@ -114,7 +82,6 @@ function addMessage(sender, text, cls) {
     msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${formatted}</span> <span style="font-size:0.7em; opacity:0.7; margin-left:0.5em;">${timestamp}</span>`;
     msg.setAttribute('data-original', msg.innerHTML);
 
-    // Apply current theme
     const theme = themes[currentTheme] || themes.dark;
     if (cls === 'user') {
       msg.style.background = theme.userBubble;
@@ -134,15 +101,6 @@ function addMessage(sender, text, cls) {
   }
 }
 
-/* --- DOM elements --- */
-const promptInput = document.getElementById('prompt');
-const sendBtn = document.getElementById('sendBtn');
-const clearBtn = document.getElementById('clearMemory');
-const historyBtn = document.getElementById('historyBtn');
-const historyFrame = document.getElementById('historyFrame');
-const closeHistory = document.getElementById('closeHistory');
-const searchBar = document.getElementById('searchBar');
-
 /* --- Typing indicator --- */
 function showTypingIndicator() {
   const chat = document.getElementById('chat');
@@ -151,36 +109,22 @@ function showTypingIndicator() {
   const typing = document.createElement('div');
   typing.id = 'typingIndicator';
   typing.className = 'message ai';
-  typing.innerHTML = `<b>AI:</b> <span class="messageText">Typing</span>`;
+  typing.innerHTML = `<b>AI:</b> <span class="messageText">Typing...</span>`;
 
   const theme = themes[currentTheme] || themes.dark;
   typing.style.background = theme.aiBubble;
   typing.style.color = theme.inputText;
+
   typing.style.opacity = '0';
   typing.style.transition = 'opacity 0.4s ease';
-
   chat.appendChild(typing);
   chat.scrollTop = chat.scrollHeight;
-
-  requestAnimationFrame(() => {
-    typing.style.opacity = '1';
-  });
-
-  // Animate dots
-  const span = typing.querySelector('.messageText');
-  let dotCount = 0;
-  typingInterval = setInterval(() => {
-    dotCount = (dotCount + 1) % 4;
-    span.textContent = 'Typing' + '.'.repeat(dotCount);
-  }, 500);
+  requestAnimationFrame(() => typing.style.opacity = '1');
 }
 
 function removeTypingIndicator() {
   const typing = document.getElementById('typingIndicator');
   if (typing) {
-    clearInterval(typingInterval);
-    typingInterval = null;
-
     typing.style.transition = 'opacity 0.4s ease';
     typing.style.opacity = '0';
     setTimeout(() => typing.remove(), 400);
@@ -197,16 +141,13 @@ async function sendMessage(){
 
     showTypingIndicator();
 
-    const url = `/cgi-bin/JTAICB.sh?input=${encodeURIComponent(text)}`;
-    const res = await fetch(url,{cache:"no-store"});
+    // ✅ Use the Flask /api endpoint
+    const url = `/api?input=${encodeURIComponent(text)}`;
+    const res = await fetch(url, {cache:"no-store"});
     const reply = await res.text();
 
     removeTypingIndicator();
-
-    const lines = reply.split(/\r?\n/);
-    let aiLine = lines.find(l=>l.startsWith('AI:'))||reply;
-    aiLine = aiLine.replace(/^AI:\s*/,'');
-    addMessage('AI', aiLine,'ai');
+    addMessage('AI', reply,'ai');
   } catch(e){
     console.error(e);
     removeTypingIndicator();
@@ -214,13 +155,22 @@ async function sendMessage(){
   }
 }
 
+/* --- DOM elements --- */
+const promptInput = document.getElementById('prompt');
+const sendBtn = document.getElementById('sendBtn');
+const clearBtn = document.getElementById('clearMemory');
+const historyBtn = document.getElementById('historyBtn');
+const historyFrame = document.getElementById('historyFrame');
+const closeHistory = document.getElementById('closeHistory');
+const searchBar = document.getElementById('searchBar');
+
 /* --- Event wiring --- */
 sendBtn.addEventListener('click', e=>{ e.preventDefault(); sendMessage(); });
 promptInput.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); sendMessage(); } });
 clearBtn.addEventListener('click', async e=>{
   e.preventDefault();
   try{
-    await fetch(`/cgi-bin/JTAICB.sh?clear=true`);
+    await fetch(`/api?clear=true`);
     document.getElementById('chat').innerHTML='';
     addMessage('System','Conversation memory cleared','system');
   } catch(e){console.error(e);}
@@ -229,7 +179,7 @@ clearBtn.addEventListener('click', async e=>{
 /* --- History iframe --- */
 historyBtn.addEventListener('click', async ()=>{
   try {
-    historyFrame.src = "/cgi-bin/JTAICB.sh?history=true";
+    historyFrame.src = "/api?view=history";
     historyFrame.style.display = 'block';
     closeHistory.style.display = 'block';
     historyFrame.onload = () => {
@@ -240,7 +190,9 @@ historyBtn.addEventListener('click', async ()=>{
         doc.body.scrollTop = doc.body.scrollHeight;
       } catch (e) { console.error(e); }
     };
-  } catch(e) { console.error("History load error:", e); }
+  } catch(e) {
+    console.error("History load error:", e);
+  }
 });
 closeHistory.addEventListener('click', () => {
   historyFrame.style.display = 'none';
@@ -272,17 +224,17 @@ searchBar.addEventListener('input', () => {
 
 /* --- Themes --- */
 const themes = {
-  dark: { background:'#111', chatBackground:'#222', userBubble:'#6272a4', aiBubble:'#50fa7b', systemText:'#ff5555', inputBackground:'#222', inputText:'#fff' },
-  light:{ background:'#f4f4f4', chatBackground:'#fff', userBubble:'#007bff', aiBubble:'#28a745', systemText:'#dc3545', inputBackground:'#fff', inputText:'#000' },
-  sunset:{ background:'#ffecd1', chatBackground:'#ffe4c4', userBubble:'#ff7f50', aiBubble:'#ffa07a', systemText:'#ff4500', inputBackground:'#fff5e6', inputText:'#333' },
-  red:{ background:'#2b0000', chatBackground:'#3d0c0c', userBubble:'#ff4d4d', aiBubble:'#ff9999', systemText:'#ffb3b3', inputBackground:'#4d0f0f', inputText:'#fff' },
-  orange:{ background:'#2b1500', chatBackground:'#3d1f00', userBubble:'#ff7b00', aiBubble:'#ffb366', systemText:'#ffcc99', inputBackground:'#4d2600', inputText:'#fff' },
-  yellow:{ background:'#2b2b00', chatBackground:'#3d3d00', userBubble:'#ffee00', aiBubble:'#fff57f', systemText:'#fff8b3', inputBackground:'#4d4d00', inputText:'#000' },
-  green:{ background:'#001f00', chatBackground:'#0c3d0c', userBubble:'#00b33c', aiBubble:'#66ff99', systemText:'#aaffcc', inputBackground:'#004d1a', inputText:'#fff' },
-  teal:{ background:'#001f1f', chatBackground:'#0c3d3d', userBubble:'#00b3b3', aiBubble:'#66ffff', systemText:'#99ffff', inputBackground:'#004d4d', inputText:'#fff' },
-  blue:{ background:'#000f33', chatBackground:'#001a4d', userBubble:'#3385ff', aiBubble:'#80b3ff', systemText:'#99ccff', inputBackground:'#002b80', inputText:'#fff' },
-  purple:{ background:'#1a0033', chatBackground:'#26004d', userBubble:'#9933ff', aiBubble:'#cc99ff', systemText:'#e6ccff', inputBackground:'#330066', inputText:'#fff' },
-  pink:{ background:'#33001a', chatBackground:'#4d0026', userBubble:'#ff66b3', aiBubble:'#ffb3d9', systemText:'#ffccff', inputBackground:'#660033', inputText:'#fff' }
+  dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
+  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
+  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
+  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
+  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
+  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
+  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
+  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
+  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
+  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
 };
 
 function applyTheme(name) {
@@ -299,14 +251,12 @@ function applyTheme(name) {
   document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
 }
 
-// Handle dropdown change
 document.getElementById('themeSelector').addEventListener('change', e => {
   const name = e.target.value;
   applyTheme(name);
   localStorage.setItem('theme', name);
 });
 
-// Load saved theme
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme && themes[savedTheme]) {
   applyTheme(savedTheme);
@@ -315,9 +265,38 @@ if (savedTheme && themes[savedTheme]) {
   applyTheme('dark');
 }
 
-/* --- Focus input --- */
 promptInput.focus();
 </script>
+
+</head>
+<body>
+<input id="searchBar" type="text" placeholder="Search messages..." />
+<select id="themeSelector">
+  <optgroup label="Classic Themes">
+    <option value="dark">Dark</option>
+    <option value="light">Light</option>
+    <option value="sunset">Sunset</option>
+  </optgroup>
+  <optgroup label="Color Themes">
+    <option value="red">Red</option>
+    <option value="orange">Orange</option>
+    <option value="yellow">Yellow</option>
+    <option value="green">Green</option>
+    <option value="teal">Teal</option>
+    <option value="blue">Blue</option>
+    <option value="purple">Purple</option>
+    <option value="pink">Pink</option>
+  </optgroup>
+</select>
+<div id="chat" role="log" aria-live="polite"></div>
+
+<div id="inputArea">
+  <input id="prompt" type="text" placeholder="Type your message..." autocomplete="off" />
+  <button id="sendBtn">Send</button>
+  <button id="clearMemory" title="Clear server memory">Clear Memory</button>
+  <button id="historyBtn">History</button>
+</div>
+<iframe id="historyFrame"></iframe>
+<button id="closeHistory">Close History</button>
 </body>
 </html>
-
