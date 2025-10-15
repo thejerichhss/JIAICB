@@ -6,9 +6,29 @@
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display: flex; flex-direction: column; height: 100vh; }
   #chat { flex: 1; padding: 1em; overflow-y: auto; background: #222; border-bottom: 1px solid #333; text-align: left; }
-  .message { display: block; padding: 0.5em 1em; border-radius: 15px; margin: 0.25em 0; max-width: 70%; word-wrap: break-word; position: relative; }
-  .user { align-self: flex-end; background: #6272a4; color: #fff; text-align: left; }
-  .ai { align-self: flex-start; background: #50fa7b; color: #111; text-align: left; }
+  .message {
+  display: block;
+  padding: 0.5em 1em;
+  border-radius: 15px;
+  margin: 0.25em 0;
+  max-width: 70%;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.user {
+  align-self: flex-end;
+  background: #6272a4;
+  color: #fff;
+  text-align: left;
+}
+
+.ai {
+  align-self: flex-start;
+  background: #50fa7b;
+  color: #111;
+  text-align: left;
+}
   .system { text-align: center; font-style: italic; color: #ff5555; }
   .sender { font-weight: bold; }
   .messageText { display: block; margin-top: 0.25em; }
@@ -105,10 +125,18 @@ if (savedTheme && themes[savedTheme]) {
 
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
+  
+  const wrapper = document.createElement('div');
+  wrapper.style.display = 'flex';
+  wrapper.style.width = '100%';
+  wrapper.style.justifyContent = cls === 'user' ? 'flex-end' : 'flex-start';
+
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
-  chat.appendChild(msg);
+
+  wrapper.appendChild(msg);
+  chat.appendChild(wrapper);
   chat.scrollTop = chat.scrollHeight;
 }
 
