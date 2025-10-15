@@ -156,8 +156,20 @@ function showTyping() {
     const t = document.createElement('div');
     t.id = 'typing';
     t.className = 'message ai';
-    t.textContent = 'AI is typing...';
-    document.getElementById('chat').appendChild(t);
+    t.innerHTML = `<b>AI:</b> <span class="messageText">Typing...</span>`;
+
+    const theme = themes[currentTheme] || themes.dark;
+    t.style.background = theme.aiBubble;
+    t.style.color = theme.inputText;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.width = '100%';
+    wrapper.style.justifyContent = 'flex-start';
+    wrapper.appendChild(t);
+
+    document.getElementById('chat').appendChild(wrapper);
+    document.getElementById('chat').scrollTop = document.getElementById('chat').scrollHeight;
   }
 }
 
