@@ -29,7 +29,7 @@
   color: #111;
   text-align: left;
 }
-  .system { text-align: center; font-style: italic; color: #ff5555; }
+  .system { text-align: left; font-style: italic; color: #ff5555; }
   .sender { font-weight: bold; }
   .messageText { display: block; margin-top: 0.25em; }
   #inputArea { display: flex; padding: .5em; background: #111; }
@@ -218,6 +218,9 @@ function hideTyping() {
 }
 
 async function sendMessage() {
+  const chat = document.getElementById('chat');
+  chat.querySelectorAll('.system').forEach(msg => msg.remove());
+  
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
   if (!text) return;
