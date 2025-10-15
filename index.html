@@ -125,7 +125,7 @@ if (savedTheme && themes[savedTheme]) {
 
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
-  
+
   const wrapper = document.createElement('div');
   wrapper.style.display = 'flex';
   wrapper.style.width = '100%';
@@ -134,6 +134,17 @@ function addMessage(sender, text, cls) {
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
+
+  const theme = themes[currentTheme] || themes.dark;
+  if (cls === 'user') {
+    msg.style.background = theme.userBubble;
+    msg.style.color = theme.inputText;
+  } else if (cls === 'ai') {
+    msg.style.background = theme.aiBubble;
+    msg.style.color = theme.inputText;
+  } else if (cls === 'system') {
+    msg.style.color = theme.systemText;
+  }
 
   wrapper.appendChild(msg);
   chat.appendChild(wrapper);
