@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>JIAICB (V0.63)</title>
+<title>JIAICB (V0.71)</title>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display: flex; flex-direction: column; height: 100vh; }
   #chat { flex: 1; padding: 1em; overflow-y: auto; background: #222; border-bottom: 1px solid #333; text-align: left; }
@@ -72,6 +72,41 @@
     <option value="pink">Pink</option>
   </optgroup>
 </select>
+<button id="modsBtn" style="margin-left:10px;">Mods</button>
+
+<div id="modsPanel" style="
+  display:none;
+  position:fixed;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  width:400px;
+  background:#222;
+  color:white;
+  border:2px solid #50fa7b;
+  border-radius:10px;
+  padding:1em;
+  z-index:10000;
+  box-shadow:0 0 20px #000;
+">
+  <h3 style="margin-top:0; text-align:center;">Custom Theme Editor</h3>
+  <div id="customThemeEditor">
+    <label>Background: <input type="color" id="background" class="colorInput" value="#111"></label><br>
+    <label>Chat Background: <input type="color" id="chatBackground" class="colorInput" value="#222"></label><br>
+    <label>User Bubble: <input type="color" id="userBubble" class="colorInput" value="#6272a4"></label><br>
+    <label>AI Bubble: <input type="color" id="aiBubble" class="colorInput" value="#50fa7b"></label><br>
+    <label>System Text: <input type="color" id="systemText" class="colorInput" value="#ff5555"></label><br>
+    <label>Input Background: <input type="color" id="inputBackground" class="colorInput" value="#222"></label><br>
+    <label>Input Text: <input type="color" id="inputText" class="colorInput" value="#ffffff"></label><br><br>
+    <button id="applyCustomTheme">Apply</button>
+    <button id="saveTheme">Export</button>
+    <input type="file" id="loadTheme" accept=".json" style="color:white;" />
+  </div>
+  <button id="closeMods" style="
+    position:absolute; top:8px; right:8px;
+    background:red; border:none; color:white;
+    border-radius:5px; padding:2px 6px; cursor:pointer;
+  ">X</button>
+</div>
 
 <div id="chat"></div>
 
@@ -90,54 +125,21 @@ let currentTheme = 'dark';
 const themes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
   light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
-  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
-  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
-  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
-  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
-  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
-  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
-  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
-  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
 };
 
 function applyTheme(name) {
   const theme = themes[name] || themes.dark;
   currentTheme = name;
-
-  const body = document.body;
-  const chat = document.getElementById('chat');
-  const prompt = document.getElementById('prompt');
-
-  [body, chat, prompt].forEach(el => {
-    el.style.transition = 'background 0.4s, color 0.4s';
-  });
-
-  body.style.background = theme.background;
-  chat.style.background = theme.chatBackground;
-  prompt.style.background = theme.inputBackground;
-  prompt.style.color = theme.inputText;
-
-  document.querySelectorAll('.user').forEach(el => {
-    el.style.transition = 'background 0.4s, color 0.4s';
-    el.style.background = theme.userBubble;
-    el.style.color = theme.inputText;
-  });
-  document.querySelectorAll('.ai').forEach(el => {
-    el.style.transition = 'background 0.4s, color 0.4s';
-    el.style.background = theme.aiBubble;
-    el.style.color = theme.inputText;
-  });
-  document.querySelectorAll('.system').forEach(el => {
-    el.style.transition = 'color 0.4s';
-    el.style.color = theme.systemText;
-  });
-
+  document.body.style.background = theme.background;
+  document.getElementById('chat').style.background = theme.chatBackground;
+  document.getElementById('prompt').style.background = theme.inputBackground;
+  document.getElementById('prompt').style.color = theme.inputText;
+  document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
+  document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
+  document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
   const typing = document.getElementById('typing');
-  if (typing) {
-    typing.style.background = theme.aiBubble;
-    typing.style.color = theme.inputText;
-  }
+  if (typing) typing.style.background = theme.aiBubble;
 }
 
 document.getElementById('themeSelector').addEventListener('change', e => {
@@ -153,41 +155,12 @@ if (savedTheme && themes[savedTheme]) {
 
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
-  const msgWrapper = document.createElement('div');
-  msgWrapper.style.display = 'flex';
-  msgWrapper.style.flexDirection = 'column';
-  msgWrapper.style.width = '100%';
-  msgWrapper.style.marginBottom = '0.25em';
-  if (cls === 'user') msgWrapper.style.alignItems = 'flex-end';
-  else if (cls === 'ai') msgWrapper.style.alignItems = 'flex-start';
-
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
-
-  const theme = themes[currentTheme] || themes.dark;
-  if (cls === 'user') {
-    msg.style.background = theme.userBubble;
-    msg.style.color = theme.inputText;
-  } else if (cls === 'ai') {
-    msg.style.background = theme.aiBubble;
-    msg.style.color = theme.inputText;
-  } else if (cls === 'system') {
-    msg.style.color = theme.systemText;
-  }
-
-  msg.style.opacity = '0';
-  msg.style.transform = 'translateY(10px)';
-  msg.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-
-  msgWrapper.appendChild(msg);
-  chat.appendChild(msgWrapper);
+  if (sender === 'System') msg.style.textAlign = 'left';
+  chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
-
-  requestAnimationFrame(() => {
-    msg.style.opacity = '1';
-    msg.style.transform = 'translateY(0)';
-  });
 }
 
 function showTyping() {
@@ -196,38 +169,26 @@ function showTyping() {
     t.id = 'typing';
     t.className = 'message ai';
     t.textContent = 'AI is typing...';
-
-    const theme = themes[currentTheme] || themes.dark;
-    t.style.background = theme.aiBubble;
-    t.style.color = theme.inputText;
-
-    t.style.opacity = '0';
-    t.style.transition = 'opacity 0.3s ease';
+    t.style.background = themes[currentTheme].aiBubble;
     document.getElementById('chat').appendChild(t);
-
-    requestAnimationFrame(() => t.style.opacity = '1');
   }
 }
 
 function hideTyping() {
   const t = document.getElementById('typing');
-  if (t) {
-    t.style.opacity = '0';
-    setTimeout(() => t.remove(), 300);
-  }
+  if (t) t.remove();
 }
 
 async function sendMessage() {
-  const chat = document.getElementById('chat');
-  chat.querySelectorAll('.system').forEach(msg => msg.remove());
-  
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
   if (!text) return;
   addMessage('You', text, 'user');
   prompt.value = '';
+  document.querySelectorAll('.system').forEach(el => {
+    if (el.textContent.includes('Memory cleared!')) el.remove();
+  });
   showTyping();
-
   try {
     const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
     const reply = await res.text();
@@ -264,6 +225,7 @@ closeHistory.onclick = () => {
 };
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    document.getElementById('modsPanel').style.display = 'none';
     historyFrame.style.display = 'none';
     closeHistory.style.display = 'none';
   }
@@ -275,6 +237,56 @@ document.getElementById('searchBar').addEventListener('input', e => {
     const text = m.textContent.toLowerCase();
     m.style.display = term && !text.includes(term) ? 'none' : 'block';
   });
+});
+
+// === Mods Panel Logic ===
+const modsBtn = document.getElementById('modsBtn');
+const modsPanel = document.getElementById('modsPanel');
+const closeMods = document.getElementById('closeMods');
+
+modsBtn.onclick = () => modsPanel.style.display = 'block';
+closeMods.onclick = () => modsPanel.style.display = 'none';
+
+// Live color preview
+document.querySelectorAll('.colorInput').forEach(input => {
+  input.addEventListener('input', () => {
+    const theme = {};
+    document.querySelectorAll('.colorInput').forEach(i => theme[i.id] = i.value);
+    themes.custom = theme;
+    applyTheme('custom');
+  });
+});
+
+document.getElementById('applyCustomTheme').addEventListener('click', () => {
+  localStorage.setItem('theme', 'custom');
+});
+
+document.getElementById('saveTheme').addEventListener('click', () => {
+  const inputs = document.querySelectorAll('.colorInput');
+  const theme = {};
+  inputs.forEach(i => theme[i.id] = i.value);
+  const blob = new Blob([JSON.stringify(theme, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'custom_theme.json';
+  a.click();
+});
+
+document.getElementById('loadTheme').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = JSON.parse(ev.target.result);
+    themes.custom = data;
+    applyTheme('custom');
+    localStorage.setItem('theme', 'custom');
+    for (const k in data) {
+      const input = document.getElementById(k);
+      if (input) input.value = data[k];
+    }
+  };
+  reader.readAsText(file);
 });
 </script>
 </body>
