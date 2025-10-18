@@ -312,31 +312,58 @@ modsBtn.addEventListener("click", () => {
 });
 
 // --- IMPORT CHAT ---
-const importChatBtn = document.getElementById('importChatBtn');
-const importChatFile = document.getElementById('importChatFile');
+window.addEventListener('DOMContentLoaded', () => {
+  const importChatBtn = document.getElementById('importChatBtn');
+  const importChatFile = document.getElementById('importChatFile');
+  const chat = document.getElementById('chat');
 
-importChatBtn.addEventListener('click', () => importChatFile.click());
-
-importChatFile.addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  try {
-    const text = await file.text();
-    const importedChat = JSON.parse(text);
-
-    // Clear current chat + memory
-    document.getElementById('chat').innerHTML = '';
-    chatHistory = [];
-
-    // Add imported messages & save to memory
-    document.getElementById('chat').innerHTML = '';
-chatHistory = [];
-
-importedChat.forEach(msg => {
-  if (msg.sender && msg.text && msg.cls) {
-    addMessage(msg.sender, msg.text, msg.cls, { save: true });
+  if (!importChatBtn || !importChatFile) {
+    console.error("Import elements not found!");
+    return;
   }
+
+  importChatBtn.addEventListener('click', () => {
+    importChatFile.click();
+  });
+
+  importChatFile.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importedChat = JSON.parse(text);
+
+      if (!Array.isArray(importedChat)) {
+        alert('Invalid chat file (not a valid array).');
+        return;
+      }
+
+      // Clear chat + memory
+      chat.innerHTML = '';
+      chatHistory = [];
+
+      // Add imported messages
+      importedChat.forEach(msg => {
+        if (msg.sender && msg.text && msg.cls) {
+          addMessage(msg.sender, msg.text, msg.cls, { save: true });
+        }
+      });
+
+      // Save & apply theme
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+      applyTheme(currentTheme);
+
+      addMessage('System', 'Chat imported successfully!', 'system', { save: false });
+
+    } catch (err) {
+      console.error('Import failed:', err);
+      alert('Invalid or unreadable chat file!');
+    }
+
+    // Reset input for next import
+    e.target.value = '';
+  });
 });
 
 // Save & show success
