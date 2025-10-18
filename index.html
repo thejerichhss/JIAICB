@@ -113,19 +113,34 @@ const colorThemes = {
 };
 const themes = {...baseThemes, ...colorThemes, ...customThemes};
 
-// --- APPLY THEME ---
+// --- APPLY THEME (with animation) ---
 function applyTheme(name, override){
   const theme = override || customThemes[name] || themes[name] || baseThemes.dark;
   currentTheme = name;
-  document.body.style.background = theme.background;
-  document.getElementById('chat').style.background = theme.chatBackground;
-  const prompt = document.getElementById('prompt');
-  prompt.style.background = theme.inputBackground;
-  prompt.style.color = theme.inputText;
 
-  document.querySelectorAll('.user').forEach(m => m.style.background = theme.userBubble);
-  document.querySelectorAll('.ai').forEach(m => m.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(m => m.style.color = theme.systemText);
+  // Add transition animation for smooth theme change
+  document.body.style.transition = 'background 0.6s, color 0.6s';
+  const chat = document.getElementById('chat');
+  chat.style.transition = 'background 0.6s, color 0.6s';
+  document.getElementById('prompt').style.transition = 'background 0.6s, color 0.6s';
+
+  document.body.style.background = theme.background;
+  chat.style.background = theme.chatBackground;
+  document.getElementById('prompt').style.background = theme.inputBackground;
+  document.getElementById('prompt').style.color = theme.inputText;
+
+  document.querySelectorAll('.user').forEach(m => {
+    m.style.transition = 'background 0.6s';
+    m.style.background = theme.userBubble;
+  });
+  document.querySelectorAll('.ai').forEach(m => {
+    m.style.transition = 'background 0.6s';
+    m.style.background = theme.aiBubble;
+  });
+  document.querySelectorAll('.system').forEach(m => {
+    m.style.transition = 'color 0.6s';
+    m.style.color = theme.systemText;
+  });
 }
 
 // --- ADD MESSAGE ---
@@ -140,6 +155,8 @@ function addMessage(sender, text, cls, options={save:true}) {
   if (cls === 'ai') msg.style.background = theme.aiBubble;
   if (cls === 'system') msg.style.color = theme.systemText;
 
+  msg.style.opacity = '0';
+  msg.style.transform = 'translateY(10px)';
   chat.appendChild(msg);
   requestAnimationFrame(() => {
     msg.style.transition = 'opacity 0.3s, transform 0.3s';
@@ -152,7 +169,7 @@ function addMessage(sender, text, cls, options={save:true}) {
     chatHistory.push({ sender, text, cls });
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
   }
-} // <-- THIS closing brace was missing before!!
+}
 
 // --- TYPING INDICATOR ---
 function showTyping() {
