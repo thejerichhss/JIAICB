@@ -122,15 +122,32 @@ function animateMessage(el){
   requestAnimationFrame(()=>{ el.style.opacity=1; el.style.transform='translateY(0)'; });
 }
 
-function addMessage(sender,text,cls){
-  const chat=document.getElementById('chat');
-  const msg=document.createElement('div');
-  msg.className=`message ${cls}`;
-  msg.innerHTML=`<b>${sender}:</b> <span class="messageText">${text}</span>`;
+function addMessage(sender, text, cls, options = { save: true }) {
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div');
+  msg.className = `message ${cls}`;
+  msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
+  
+  // Apply theme colors
+  const theme = themes[currentTheme];
+  if (cls === 'user') msg.style.background = theme.userBubble;
+  if (cls === 'ai') msg.style.background = theme.aiBubble;
+  if (cls === 'system') { msg.style.color = theme.systemText; msg.style.textAlign = 'left'; }
+
+  // Animate message
+  msg.style.opacity = '0';
+  msg.style.transform = 'translateY(10px)';
+  requestAnimationFrame(() => {
+    msg.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    msg.style.opacity = '1';
+    msg.style.transform = 'translateY(0)';
+  });
+
   chat.appendChild(msg);
-  animateMessage(msg);
-  chat.scrollTop=chat.scrollHeight;
-  chatHistory.push({sender,text,cls});
+  chat.scrollTop = chat.scrollHeight;
+
+  // Save to chatHistory only if not in silent mode
+  if (options.save !== false) chatHistory.push({ sender, text, cls });
 }
 
 function showTyping(){
@@ -276,20 +293,14 @@ importChatFile.addEventListener('change', async e => {
 
     // Clear current chat
     document.getElementById('chat').innerHTML = '';
-    
-    // Reset chatHistory to exactly imported chat
-    chatHistory = importedChat.map(msg => ({ ...msg })); 
 
-    // Render messages in chat WITHOUT pushing again to chatHistory
-    importedChat.forEach(msg => {
-      const chat = document.getElementById('chat');
-      const messageEl = document.createElement('div');
-      messageEl.className = `message ${msg.cls}`;
-      messageEl.innerHTML = `<b>${msg.sender}:</b> <span class="messageText">${msg.text}</span>`;
-      chat.appendChild(messageEl);
-    });
+    // Replace chatHistory with imported chat
+    chatHistory = importedChat.map(msg => ({ ...msg }));
 
-    // Send imported chat to AI memory endpoint
+    // Render messages using addMessage() in silent mode
+    importedChat.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
+
+    // Update backend memory
     await fetch('/api', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
