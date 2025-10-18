@@ -266,16 +266,39 @@ const importChatBtn=document.getElementById('importChatBtn');
 const importChatFile=document.getElementById('importChatFile');
 importChatBtn.onclick=()=>importChatFile.click();
 
-importChatFile.addEventListener('change',async e=>{
-  const file=e.target.files[0]; if(!file) return;
-  const text=await file.text();
-  try{
-    const importedChat=JSON.parse(text);
-    chatHistory=[]; document.getElementById('chat').innerHTML='';
-    importedChat.forEach(msg=>addMessage(msg.sender,msg.text,msg.cls));
+importChatFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const text = await file.text();
+  try {
+    const importedChat = JSON.parse(text);
+
+    // Clear current chat
+    document.getElementById('chat').innerHTML = '';
+    
+    // Reset chatHistory to exactly imported chat
+    chatHistory = importedChat.map(msg => ({ ...msg })); 
+
+    // Render messages in chat WITHOUT pushing again to chatHistory
+    importedChat.forEach(msg => {
+      const chat = document.getElementById('chat');
+      const messageEl = document.createElement('div');
+      messageEl.className = `message ${msg.cls}`;
+      messageEl.innerHTML = `<b>${msg.sender}:</b> <span class="messageText">${msg.text}</span>`;
+      chat.appendChild(messageEl);
+    });
+
     // Send imported chat to AI memory endpoint
-    await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({memory:chatHistory})});
-  }catch(err){ alert('Invalid chat file!'); }
+    await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memory: chatHistory })
+    });
+
+  } catch {
+    alert('Invalid chat file!');
+  }
 });
 </script>
 </body>
