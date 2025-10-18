@@ -118,19 +118,14 @@ function applyTheme(name, override){
   const theme = override || customThemes[name] || themes[name] || baseThemes.dark;
   currentTheme = name;
   document.body.style.background = theme.background;
-  const chat = document.getElementById('chat');
-  chat.style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
+  document.getElementById('chat').style.background = theme.chatBackground;
+  const prompt = document.getElementById('prompt');
+  prompt.style.background = theme.inputBackground;
+  prompt.style.color = theme.inputText;
 
-  // Update all message bubbles
   document.querySelectorAll('.user').forEach(m => m.style.background = theme.userBubble);
   document.querySelectorAll('.ai').forEach(m => m.style.background = theme.aiBubble);
   document.querySelectorAll('.system').forEach(m => m.style.color = theme.systemText);
-
-  // Typing indicator
-  const typing = document.getElementById('typing');
-  if (typing) typing.style.background = theme.aiBubble;
 }
 
 // --- ADD MESSAGE ---
@@ -140,29 +135,24 @@ function addMessage(sender, text, cls, options={save:true}) {
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
 
-  // Apply theme colors
   const theme = themes[currentTheme];
   if (cls === 'user') msg.style.background = theme.userBubble;
   if (cls === 'ai') msg.style.background = theme.aiBubble;
   if (cls === 'system') msg.style.color = theme.systemText;
 
-  // Animation
-  msg.style.opacity = '0';
-  msg.style.transform = 'translateY(10px)';
+  chat.appendChild(msg);
   requestAnimationFrame(() => {
     msg.style.transition = 'opacity 0.3s, transform 0.3s';
     msg.style.opacity = '1';
     msg.style.transform = 'translateY(0)';
   });
-
-  chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
 
-if (options.save) {
-  chatHistory.push({ sender, text, cls });
-  localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-}
-
+  if (options.save) {
+    chatHistory.push({ sender, text, cls });
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+  }
+} // <-- THIS closing brace was missing before!!
 
 // --- TYPING INDICATOR ---
 function showTyping() {
@@ -270,41 +260,10 @@ document.getElementById('importChatFile').addEventListener('change', async e=>{
     document.getElementById('chat').innerHTML = '';
     chatHistory = [];
     imported.forEach(m => addMessage(m.sender, m.text, m.cls, {save:true}));
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    addMessage('System', 'Chat imported successfully!', 'system', { save:false });
   } catch {
     alert('Invalid chat file.');
-  }
-});
-
-importChatFile.addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try {
-    const importedChat = JSON.parse(text);
-
-    // Reset chat view and memory
-    document.getElementById('chat').innerHTML = '';
-    chatHistory = [];
-
-    // Add each message and save to chatHistory
-    importedChat.forEach(msg => {
-      addMessage(msg.sender, msg.text, msg.cls, { save: true });
-    });
-
-    // Save imported chat to localStorage so it becomes the active memory
-    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-
-    // Sync with backend memory (if applicable)
-    await fetch('/api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ memory: chatHistory })
-    });
-
-    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-
-  } catch {
-    alert('Invalid chat file!');
   }
 });
 </script>
