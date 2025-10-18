@@ -68,6 +68,7 @@
   <div style="text-align:center;">
     <button id="previewTheme">Preview</button>
     <button id="saveTheme">Save</button>
+    <button id="exportThemeBtn" style="background:#00bfff;color:white;margin-top:5px;">Export Theme</button>
     <button id="importThemeBtn" style="background:#50fa7b;color:white;margin-top:5px;">Import Theme</button>
       <input type="file" id="importThemeFile" accept=".json" style="display:none;">
     <button id="closeTheme">Close</button>
@@ -427,7 +428,26 @@ importFile.addEventListener('change', async e => {
     alert('Invalid theme file!');
   }
 });
+const exportBtn = document.getElementById('exportThemeBtn');
 
+exportBtn.onclick = () => {
+  const theme = {
+    background: document.getElementById("bgColor").value,
+    chatBackground: document.getElementById("chatBgColor").value,
+    userBubble: document.getElementById("userColor").value,
+    aiBubble: document.getElementById("aiColor").value,
+    systemText: document.getElementById("systemColor").value,
+    inputBackground: "#222",
+    inputText: "#fff",
+    name: "CustomTheme_" + Date.now()
+  };
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", theme.name + ".json");
+  dlAnchor.click();
+};
 </script>
 </body>
 </html>
