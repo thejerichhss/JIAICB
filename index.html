@@ -86,106 +86,177 @@
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 <script>
-/* Chat + Themes core script - with server-based history iframe */
-let currentTheme = 'dark';
+let currentTheme = localStorage.getItem('theme') || 'dark';
 let chatHistory = [];
+
+/* --- THEME DEFINITIONS --- */
 const baseThemes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
-  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'}
+  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
 };
-const themes = baseThemes;
+const colorThemes = {
+  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
+  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
+  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
+  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
+  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
+  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
+  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
+  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
+};
+const themes = { ...baseThemes, ...colorThemes };
 
-/* Theme application */
+/* --- APPLY THEME FUNCTION --- */
 function applyTheme(name){
-  const t = themes[name]||baseThemes.dark;
-  document.body.style.background=t.background;
-  document.body.style.color=t.inputText;
-  document.getElementById('chat').style.background=t.chatBackground;
-  document.getElementById('prompt').style.background=t.inputBackground;
-  document.getElementById('prompt').style.color=t.inputText;
-  document.querySelectorAll('.user').forEach(e=>e.style.background=t.userBubble);
-  document.querySelectorAll('.ai').forEach(e=>e.style.background=t.aiBubble);
-  document.querySelectorAll('.system').forEach(e=>e.style.color=t.systemText);
-}
-applyTheme(localStorage.getItem('theme')||'dark');
+  const t = themes[name] || themes.dark;
+  currentTheme = name;
+  localStorage.setItem('theme', name);
 
-/* Add animated message */
-function addMessage(sender,text,cls,opt={save:true}){
-  const chat=document.getElementById('chat');
-  const m=document.createElement('div');
-  m.className=`message ${cls}`;
-  m.innerHTML=`<b>${sender}:</b> <span>${text}</span>`;
-  m.style.opacity='0'; m.style.transform='translateY(10px)';
-  chat.appendChild(m);
-  requestAnimationFrame(()=>{m.style.transition='opacity .3s,transform .3s';m.style.opacity='1';m.style.transform='translateY(0)';});
-  chat.scrollTop=chat.scrollHeight;
-  if(opt.save){chatHistory.push({sender,text,cls});localStorage.setItem('chatHistory',JSON.stringify(chatHistory));}
+  document.body.style.background = t.background;
+  document.body.style.color = t.inputText;
+
+  const chat = document.getElementById('chat');
+  if(chat) chat.style.background = t.chatBackground;
+
+  const prompt = document.getElementById('prompt');
+  if(prompt){
+    prompt.style.background = t.inputBackground;
+    prompt.style.color = t.inputText;
+  }
+
+  // Update all existing bubbles
+  document.querySelectorAll('.user').forEach(el => el.style.background = t.userBubble);
+  document.querySelectorAll('.ai').forEach(el => el.style.background = t.aiBubble);
+  document.querySelectorAll('.system').forEach(el => el.style.color = t.systemText);
+
+  // Typing indicator
+  const typing = document.getElementById('typing');
+  if(typing) typing.style.background = t.aiBubble;
 }
 
-/* Typing indicator */
+/* --- LOAD SAVED THEME --- */
+applyTheme(currentTheme);
+
+/* --- THEME SELECTOR --- */
+document.getElementById('themeSelector').addEventListener('change', e=>{
+  applyTheme(e.target.value);
+});
+
+/* --- ADD MESSAGE --- */
+function addMessage(sender, text, cls, options={save:true}){
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div');
+  msg.className = `message ${cls}`;
+  msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
+
+  const t = themes[currentTheme];
+  if(cls==='user') msg.style.background = t.userBubble;
+  if(cls==='ai') msg.style.background = t.aiBubble;
+  if(cls==='system') msg.style.color = t.systemText;
+
+  msg.style.opacity = '0';
+  msg.style.transform = 'translateY(10px)';
+  chat.appendChild(msg);
+  requestAnimationFrame(()=>{
+    msg.style.transition = 'opacity .3s, transform .3s';
+    msg.style.opacity = '1';
+    msg.style.transform = 'translateY(0)';
+  });
+  chat.scrollTop = chat.scrollHeight;
+
+  if(options.save){
+    chatHistory.push({sender,text,cls});
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+  }
+}
+
+/* --- TYPING INDICATOR --- */
 function showTyping(){
   if(!document.getElementById('typing')){
-    const t=document.createElement('div');t.id='typing';t.className='message ai';t.textContent='AI is typing...';
-    t.style.background=(themes[currentTheme]||baseThemes.dark).aiBubble;
+    const t = document.createElement('div');
+    t.id = 'typing';
+    t.className = 'message ai';
+    t.textContent = 'AI is typing...';
+    t.style.background = themes[currentTheme].aiBubble;
     document.getElementById('chat').appendChild(t);
   }
 }
-function hideTyping(){const t=document.getElementById('typing');if(t)t.remove();}
+function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
 
-/* Send */
+/* --- SEND MESSAGE --- */
 async function sendMessage(){
   const prompt=document.getElementById('prompt');
   const text=prompt.value.trim();
   if(!text)return;
   addMessage('You',text,'user');
-  prompt.value=''; showTyping();
+  prompt.value='';
+  showTyping();
   try{
-    const r=await fetch(`/api?input=${encodeURIComponent(text)}`);const reply=await r.text();
-    hideTyping(); addMessage('AI',reply,'ai');
-  }catch{hideTyping();addMessage('System','Error contacting API','system');}
+    const res=await fetch(`/api?input=${encodeURIComponent(text)}`);
+    const reply=await res.text();
+    hideTyping();
+    addMessage('AI',reply,'ai');
+  }catch{
+    hideTyping();
+    addMessage('System','Error contacting API.','system');
+  }
 }
 document.getElementById('sendBtn').onclick=sendMessage;
 document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
 
-/* Clear */
-document.getElementById('clearMemory').onclick=async()=>{
-  await fetch('/api?clear=true');document.getElementById('chat').innerHTML='';chatHistory=[];
+/* --- CLEAR MEMORY --- */
+document.getElementById('clearMemory').addEventListener('click', async()=>{
+  await fetch('/api?clear=true');
+  document.getElementById('chat').innerHTML='';
+  chatHistory=[];
+  localStorage.removeItem('chatHistory');
   addMessage('System','Memory cleared!','system',{save:false});
-};
+});
 
-/* HISTORY (iframe of server memory) */
+/* --- HISTORY (iframe view of /api?view=history) --- */
 const historyBtn=document.getElementById('historyBtn');
 const historyFrame=document.getElementById('historyFrame');
 const closeHistory=document.getElementById('closeHistory');
 historyBtn.onclick=()=>{
-  // dynamically set the src so it pulls from /api?view=history
   historyFrame.src='/api?view=history';
   historyFrame.style.display='block';
   closeHistory.style.display='block';
 };
-closeHistory.onclick=()=>{historyFrame.style.display='none';closeHistory.style.display='none';};
+closeHistory.onclick=()=>{
+  historyFrame.style.display='none';
+  closeHistory.style.display='none';
+};
 
-/* EXPORT */
+/* --- IMPORT / EXPORT CHAT --- */
 const exportBtn=document.createElement('button');
 exportBtn.textContent='Export Chat';
 exportBtn.onclick=()=>{
   const blob=new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='chat_history.json';a.click();URL.revokeObjectURL(url);
+  const a=document.createElement('a');
+  a.href=url; a.download='chat_history.json'; a.click();
+  URL.revokeObjectURL(url);
 };
 document.getElementById('inputArea').appendChild(exportBtn);
 
-/* IMPORT */
 const importChatBtn=document.getElementById('importChatBtn');
 const importChatFile=document.getElementById('importChatFile');
 importChatBtn.onclick=()=>importChatFile.click();
-importChatFile.onchange=async e=>{
-  const f=e.target.files[0];if(!f)return;
-  const txt=await f.text();const data=JSON.parse(txt);
-  document.getElementById('chat').innerHTML='';chatHistory=[];
-  data.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:true}));
-  addMessage('System','Chat imported successfully!','system',{save:false});
-};
+importChatFile.addEventListener('change', async e=>{
+  const f=e.target.files[0];
+  if(!f)return;
+  const text=await f.text();
+  try{
+    const imported=JSON.parse(text);
+    document.getElementById('chat').innerHTML='';
+    chatHistory=[];
+    imported.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:true}));
+    addMessage('System','Chat imported successfully!','system',{save:false});
+  }catch{
+    alert('Invalid chat file.');
+  }
+});
 </script>
 </body>
 </html>
