@@ -86,148 +86,233 @@
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const themeSelector = document.getElementById("themeSelector");
-  const modsBtn = document.getElementById("modsbtn");
-  const root = document.documentElement;
-  const typingIndicator = document.getElementById("typing");
-  const chatBox = document.getElementById("chatBox");
+let currentTheme = localStorage.getItem('theme') || 'dark';
+let chatHistory = [];
 
-  let customThemes = JSON.parse(localStorage.getItem("customThemes") || "[]");
+/* --- THEME DEFINITIONS --- */
+const baseThemes = {
+  dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
+  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
+};
+const colorThemes = {
+  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
+  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
+  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
+  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
+  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
+  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
+  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
+  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
+};
+const themes = { ...baseThemes, ...colorThemes };
 
-  // === THEMES ===
-  const themes = {
-    default: {
-      "--bg": "#ffffff",
-      "--text": "#000000",
-      "--user-bubble": "#e0e0e0",
-      "--ai-bubble": "#d0f0ff"
-    },
-    dark: {
-      "--bg": "#121212",
-      "--text": "#ffffff",
-      "--user-bubble": "#333333",
-      "--ai-bubble": "#444444"
-    },
-    red: {
-      "--bg": "#2a0000",
-      "--text": "#ffaaaa",
-      "--user-bubble": "#660000",
-      "--ai-bubble": "#990000"
-    },
-    blue: {
-      "--bg": "#001f3f",
-      "--text": "#aaddff",
-      "--user-bubble": "#003366",
-      "--ai-bubble": "#004080"
-    },
-    green: {
-      "--bg": "#002a00",
-      "--text": "#aaffaa",
-      "--user-bubble": "#004d00",
-      "--ai-bubble": "#006600"
-    },
-    purple: {
-      "--bg": "#1a0033",
-      "--text": "#e0ccff",
-      "--user-bubble": "#330066",
-      "--ai-bubble": "#4b0082"
-    }
+/* --- APPLY THEME FUNCTION --- */
+function applyTheme(name){
+  const t = themes[name] || themes.dark;
+  currentTheme = name;
+  localStorage.setItem('theme', name);
+
+  document.body.style.background = t.background;
+  document.body.style.color = t.inputText;
+
+  const chat = document.getElementById('chat');
+  if(chat) chat.style.background = t.chatBackground;
+
+  const prompt = document.getElementById('prompt');
+  if(prompt){
+    prompt.style.background = t.inputBackground;
+    prompt.style.color = t.inputText;
+  }
+
+  // Update all existing bubbles
+  document.querySelectorAll('.user').forEach(el => el.style.background = t.userBubble);
+  document.querySelectorAll('.ai').forEach(el => el.style.background = t.aiBubble);
+  document.querySelectorAll('.system').forEach(el => el.style.color = t.systemText);
+
+  // Typing indicator
+  const typing = document.getElementById('typing');
+  if(typing) typing.style.background = t.aiBubble;
+}
+
+/* --- LOAD SAVED THEME --- */
+applyTheme(currentTheme);
+
+/* --- THEME SELECTOR --- */
+document.getElementById('themeSelector').addEventListener('change', e=>{
+  applyTheme(e.target.value);
+});
+
+/* --- ADD MESSAGE --- */
+function addMessage(sender, text, cls, options={save:true}){
+  const chat = document.getElementById('chat');
+  const msg = document.createElement('div');
+  msg.className = `message ${cls}`;
+  msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
+
+  const t = themes[currentTheme];
+  if(cls==='user') msg.style.background = t.userBubble;
+  if(cls==='ai') msg.style.background = t.aiBubble;
+  if(cls==='system') msg.style.color = t.systemText;
+
+  msg.style.opacity = '0';
+  msg.style.transform = 'translateY(10px)';
+  chat.appendChild(msg);
+  requestAnimationFrame(()=>{
+    msg.style.transition = 'opacity .3s, transform .3s';
+    msg.style.opacity = '1';
+    msg.style.transform = 'translateY(0)';
+  });
+  chat.scrollTop = chat.scrollHeight;
+
+  if(options.save){
+    chatHistory.push({sender,text,cls});
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+  }
+}
+
+/* --- TYPING INDICATOR --- */
+function showTyping(){
+  if(!document.getElementById('typing')){
+    const t = document.createElement('div');
+    t.id = 'typing';
+    t.className = 'message ai';
+    t.textContent = 'AI is typing...';
+    t.style.background = themes[currentTheme].aiBubble;
+    document.getElementById('chat').appendChild(t);
+  }
+}
+function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+
+/* --- SEND MESSAGE --- */
+async function sendMessage(){
+  const prompt=document.getElementById('prompt');
+  const text=prompt.value.trim();
+  if(!text)return;
+  addMessage('You',text,'user');
+  prompt.value='';
+  showTyping();
+  try{
+    const res=await fetch(`/api?input=${encodeURIComponent(text)}`);
+    const reply=await res.text();
+    hideTyping();
+    addMessage('AI',reply,'ai');
+  }catch{
+    hideTyping();
+    addMessage('System','Error contacting API.','system');
+  }
+}
+document.getElementById('sendBtn').onclick=sendMessage;
+document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
+
+/* --- CLEAR MEMORY --- */
+document.getElementById('clearMemory').addEventListener('click', async()=>{
+  await fetch('/api?clear=true');
+  document.getElementById('chat').innerHTML='';
+  chatHistory=[];
+  localStorage.removeItem('chatHistory');
+  addMessage('System','Memory cleared!','system',{save:false});
+});
+
+/* --- HISTORY (iframe view of /api?view=history) --- */
+const historyBtn=document.getElementById('historyBtn');
+const historyFrame=document.getElementById('historyFrame');
+const closeHistory=document.getElementById('closeHistory');
+historyBtn.onclick=()=>{
+  historyFrame.src='/api?view=history';
+  historyFrame.style.display='block';
+  closeHistory.style.display='block';
+};
+closeHistory.onclick=()=>{
+  historyFrame.style.display='none';
+  closeHistory.style.display='none';
+};
+
+/* --- Mods Button --- */
+modsBtn.addEventListener("click", () => {
+  const modal = document.createElement("div");
+  modal.className =
+    "fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50";
+  modal.innerHTML = `
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-md w-full text-gray-900 dark:text-white transition-all duration-300">
+      <h2 class="text-xl font-bold mb-4 text-center">Create Custom Theme</h2>
+      <label class="block mb-2">Theme Name:</label>
+      <input id="themeName" class="w-full mb-3 p-2 rounded bg-gray-100 dark:bg-gray-700" placeholder="MyTheme" />
+      <label class="block mb-2">Background:</label>
+      <input type="color" id="bgColor" class="w-full mb-3">
+      <label class="block mb-2">Text Color:</label>
+      <input type="color" id="textColor" class="w-full mb-3">
+      <label class="block mb-2">User Bubble:</label>
+      <input type="color" id="userColor" class="w-full mb-3">
+      <label class="block mb-2">AI Bubble:</label>
+      <input type="color" id="aiColor" class="w-full mb-4">
+      <div class="flex justify-between">
+        <button id="previewTheme" class="px-3 py-2 bg-blue-600 text-white rounded">Preview</button>
+        <button id="saveTheme" class="px-3 py-2 bg-green-600 text-white rounded">Save</button>
+        <button id="cancelTheme" class="px-3 py-2 bg-gray-500 text-white rounded">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector("#cancelTheme").onclick = () => modal.remove();
+
+  modal.querySelector("#previewTheme").onclick = () => {
+    const colors = getThemeInputs();
+    Object.entries(colors).forEach(([k, v]) =>
+      document.documentElement.style.setProperty(k, v)
+    );
   };
 
-  // Load custom themes
-  customThemes.forEach(t => (themes[t.name] = t.colors));
-  updateThemeSelector();
+  modal.querySelector("#saveTheme").onclick = () => {
+    const name = modal.querySelector("#themeName").value.trim() || "Custom";
+    const colors = getThemeInputs();
+    const customThemes = JSON.parse(localStorage.getItem("customThemes") || "[]");
+    customThemes.push({ name, colors });
+    localStorage.setItem("customThemes", JSON.stringify(customThemes));
+    modal.remove();
+    location.reload();
+  };
 
-  function updateThemeSelector() {
-    themeSelector.innerHTML = "";
-    for (const name in themes) {
-      const opt = document.createElement("option");
-      opt.value = name;
-      opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-      themeSelector.appendChild(opt);
-    }
-  }
-
-  function applyTheme(name) {
-    const t = themes[name];
-    if (!t) return;
-    Object.entries(t).forEach(([k, v]) => root.style.setProperty(k, v));
-    typingIndicator.style.color = t["--text"];
-  }
-
-  themeSelector.addEventListener("change", () => {
-    const selected = themeSelector.value;
-    applyTheme(selected);
-    localStorage.setItem("theme", selected);
-  });
-
-  const savedTheme = localStorage.getItem("theme") || "default";
-  themeSelector.value = savedTheme;
-  applyTheme(savedTheme);
-
-  // === MODS MENU ===
-  modsBtn.addEventListener("click", openCustomThemeCreator);
-
-  function openCustomThemeCreator() {
-    const modal = document.createElement("div");
-    modal.className =
-      "fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50";
-    modal.innerHTML = `
-      <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-md w-full text-gray-900 dark:text-white transition-all duration-300">
-        <h2 class="text-xl font-bold mb-4 text-center">Create Custom Theme</h2>
-        <label class="block mb-2">Theme Name:</label>
-        <input id="themeName" class="w-full mb-3 p-2 rounded bg-gray-100 dark:bg-gray-700" placeholder="MyTheme" />
-        <label class="block mb-2">Background:</label>
-        <input type="color" id="bgColor" class="w-full mb-3">
-        <label class="block mb-2">Text Color:</label>
-        <input type="color" id="textColor" class="w-full mb-3">
-        <label class="block mb-2">User Bubble:</label>
-        <input type="color" id="userColor" class="w-full mb-3">
-        <label class="block mb-2">AI Bubble:</label>
-        <input type="color" id="aiColor" class="w-full mb-4">
-        <div class="flex justify-between">
-          <button id="previewTheme" class="px-3 py-2 bg-blue-600 text-white rounded">Preview</button>
-          <button id="saveTheme" class="px-3 py-2 bg-green-600 text-white rounded">Save</button>
-          <button id="cancelTheme" class="px-3 py-2 bg-gray-500 text-white rounded">Cancel</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelector("#cancelTheme").onclick = () => modal.remove();
-
-    modal.querySelector("#previewTheme").onclick = () => {
-      const colors = getThemeInputs();
-      Object.entries(colors).forEach(([k, v]) => root.style.setProperty(k, v));
+  function getThemeInputs() {
+    return {
+      "--bg": modal.querySelector("#bgColor").value,
+      "--text": modal.querySelector("#textColor").value,
+      "--user-bubble": modal.querySelector("#userColor").value,
+      "--ai-bubble": modal.querySelector("#aiColor").value
     };
-
-    modal.querySelector("#saveTheme").onclick = () => {
-      const name = modal.querySelector("#themeName").value.trim() || "Custom";
-      const colors = getThemeInputs();
-      const newTheme = { name, colors };
-      customThemes.push(newTheme);
-      localStorage.setItem("customThemes", JSON.stringify(customThemes));
-      themes[name] = colors;
-      updateThemeSelector();
-      themeSelector.value = name;
-      applyTheme(name);
-      modal.remove();
-    };
-
-    function getThemeInputs() {
-      return {
-        "--bg": modal.querySelector("#bgColor").value,
-        "--text": modal.querySelector("#textColor").value,
-        "--user-bubble": modal.querySelector("#userColor").value,
-        "--ai-bubble": modal.querySelector("#aiColor").value
-      };
-    }
   }
+});
 
-  // === ANIMATIONS ===
-  chatBox.style.transition = "background 0.4s ease, color 0.4s ease";
-  typingIndicator.style.transition = "color 0.4s ease";
+
+/* --- IMPORT / EXPORT CHAT --- */
+const exportBtn=document.createElement('button');
+exportBtn.textContent='Export Chat';
+exportBtn.onclick=()=>{
+  const blob=new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='chat_history.json'; a.click();
+  URL.revokeObjectURL(url);
+};
+document.getElementById('inputArea').appendChild(exportBtn);
+
+const importChatBtn=document.getElementById('importChatBtn');
+const importChatFile=document.getElementById('importChatFile');
+importChatBtn.onclick=()=>importChatFile.click();
+importChatFile.addEventListener('change', async e=>{
+  const f=e.target.files[0];
+  if(!f)return;
+  const text=await f.text();
+  try{
+    const imported=JSON.parse(text);
+    document.getElementById('chat').innerHTML='';
+    chatHistory=[];
+    imported.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:true}));
+    addMessage('System','Chat imported successfully!','system',{save:false});
+  }catch{
+    alert('Invalid chat file.');
+  }
 });
 </script>
 </body>
