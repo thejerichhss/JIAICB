@@ -107,6 +107,7 @@
 <script>
 let currentTheme = 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
+let chatHistory = [];
 
 const baseThemes = {
   dark:{background:'#111', chatBackground:'#222', userBubble:'#6272a4', aiBubble:'#50fa7b', systemText:'#ff5555', inputBackground:'#222', inputText:'#fff'},
@@ -184,6 +185,7 @@ function addMessage(sender, text, cls) {
   }
 
   chat.scrollTop = chat.scrollHeight;
+  chatHistory.push({ sender, text, cls });
 }
 
 function showTyping() {
@@ -424,7 +426,6 @@ importFile.addEventListener('change', async e => {
     customThemes[themeData.name] = themeData;
     localStorage.setItem('customThemes', JSON.stringify(customThemes));
 
-    // Add to theme selector
     const opt = document.createElement('option');
     opt.value = themeData.name;
     opt.textContent = themeData.name + ' (Custom)';
@@ -457,6 +458,49 @@ exportBtn.onclick = () => {
   dlAnchor.setAttribute("download", theme.name + ".json");
   dlAnchor.click();
 };
+const exportBtn = document.createElement('button');
+exportBtn.textContent = 'Export Chat';
+exportBtn.style.marginLeft = '0.5em';
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chat_history.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const importBtn = document.createElement('button');
+importBtn.textContent = 'Import Chat';
+importBtn.style.marginLeft = '0.5em';
+importBtn.onclick = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = event => {
+      try {
+        const data = JSON.parse(event.target.result);
+        document.getElementById('chat').innerHTML = '';
+        chatHistory = [];
+        data.forEach(msg => addMessage(msg.sender, msg.text, msg.cls));
+        addMessage('System', 'Chat imported successfully!', 'system');
+      } catch {
+        addMessage('System', 'Invalid JSON file.', 'system');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+};
+
+const inputArea = document.getElementById('inputArea');
+inputArea.appendChild(exportBtn);
+inputArea.appendChild(importBtn);
 </script>
 </body>
 </html>
