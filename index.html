@@ -292,18 +292,8 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// --- Mods Button ---
-const modsBtn = document.createElement('button');
-modsBtn.textContent = 'Mods';
-modsBtn.style.marginLeft = '0.5em';
-modsBtn.style.padding = '0.5em 1em';
-modsBtn.style.borderRadius = '5px';
-modsBtn.style.border = 'none';
-modsBtn.style.background = '#444';
-modsBtn.style.color = '#fff';
-modsBtn.style.cursor = 'pointer';
-document.getElementById('searchBar').insertAdjacentElement('afterend', modsBtn);
-
+// --- Mods Button (id="modsBtn") ---
+const modsBtn = document.getElementById('modsBtn');
 const fileInput = document.createElement('input');
 fileInput.type = 'file';
 fileInput.accept = '.json';
