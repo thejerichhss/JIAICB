@@ -374,30 +374,7 @@ exportChatBtn.onclick = () => {
   a.href = url; a.download = 'chat_history.json'; a.click();
   URL.revokeObjectURL(url);
 };
-
-const importChatBtn = document.createElement('button');
-importChatBtn.textContent = 'Import Chat';
-importChatBtn.style.marginLeft = '0.5em';
-importChatBtn.onclick = () => {
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = 'application/json';
-  input.onchange = e => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        document.getElementById('chat').innerHTML = '';
-        chatHistory = [];
-        data.forEach(m => addMessage(m.sender, m.text, m.cls));
-        addMessage('System', 'Chat imported successfully!', 'system');
-      } catch { addMessage('System', 'Invalid JSON file.', 'system'); }
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-};
-document.getElementById('inputArea').append(exportChatBtn, importChatBtn);
+document.getElementById('inputArea').append(exportChatBtn);
 </script>
 </body>
 </html>
