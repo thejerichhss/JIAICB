@@ -86,16 +86,23 @@
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 <script>
+/* Chat + Themes core script - fixed */
 let currentTheme = 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 let chatHistory = [];
+
+// load saved chat history (memory) and render it without re-saving
 const savedChat = localStorage.getItem('chatHistory');
 if (savedChat) {
-  chatHistory = JSON.parse(savedChat);
-  chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
+  try {
+    chatHistory = JSON.parse(savedChat);
+    chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
+  } catch (e) {
+    chatHistory = [];
+  }
 }
 
-// --- THEMES ---
+/* THEMES */
 const baseThemes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
   light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
@@ -111,58 +118,56 @@ const colorThemes = {
   purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
   pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
 };
-const themes = {...baseThemes, ...colorThemes, ...customThemes};
+const themes = { ...baseThemes, ...colorThemes, ...customThemes };
 
-// --- APPLY THEME (with animation) ---
-function applyTheme(name, override){
+/* Apply theme with smooth transitions */
+function applyTheme(name, override) {
   const theme = override || customThemes[name] || themes[name] || baseThemes.dark;
   currentTheme = name;
-
-  // Add transition animation for smooth theme change
-  document.body.style.transition = 'background 0.6s, color 0.6s';
+  const body = document.body;
   const chat = document.getElementById('chat');
-  chat.style.transition = 'background 0.6s, color 0.6s';
-  document.getElementById('prompt').style.transition = 'background 0.6s, color 0.6s';
+  const prompt = document.getElementById('prompt');
 
-  document.body.style.background = theme.background;
+  // transitions
+  body.style.transition = 'background 0.5s, color 0.5s';
+  chat.style.transition = 'background 0.5s';
+  prompt.style.transition = 'background 0.5s, color 0.5s';
+
+  body.style.background = theme.background;
   chat.style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
+  prompt.style.background = theme.inputBackground;
+  prompt.style.color = theme.inputText;
 
-  document.querySelectorAll('.user').forEach(m => {
-    m.style.transition = 'background 0.6s';
-    m.style.background = theme.userBubble;
-  });
-  document.querySelectorAll('.ai').forEach(m => {
-    m.style.transition = 'background 0.6s';
-    m.style.background = theme.aiBubble;
-  });
-  document.querySelectorAll('.system').forEach(m => {
-    m.style.transition = 'color 0.6s';
-    m.style.color = theme.systemText;
-  });
+  document.querySelectorAll('.user').forEach(el => { el.style.transition = 'background 0.5s'; el.style.background = theme.userBubble; });
+  document.querySelectorAll('.ai').forEach(el   => { el.style.transition = 'background 0.5s'; el.style.background = theme.aiBubble; });
+  document.querySelectorAll('.system').forEach(el => { el.style.transition = 'color 0.5s'; el.style.color = theme.systemText; });
 }
 
-// --- ADD MESSAGE ---
-function addMessage(sender, text, cls, options={save:true}) {
+/* Add message (animated). options.save === false prevents adding to chatHistory */
+function addMessage(sender, text, cls, options = { save: true }) {
   const chat = document.getElementById('chat');
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
 
-  const theme = themes[currentTheme];
+  // style bubble by current theme (safe fallback)
+  const theme = themes[currentTheme] || baseThemes.dark;
   if (cls === 'user') msg.style.background = theme.userBubble;
   if (cls === 'ai') msg.style.background = theme.aiBubble;
   if (cls === 'system') msg.style.color = theme.systemText;
 
+  // initial animation state
   msg.style.opacity = '0';
   msg.style.transform = 'translateY(10px)';
   chat.appendChild(msg);
+
+  // animate in
   requestAnimationFrame(() => {
-    msg.style.transition = 'opacity 0.3s, transform 0.3s';
+    msg.style.transition = 'opacity 0.28s ease, transform 0.28s ease';
     msg.style.opacity = '1';
     msg.style.transform = 'translateY(0)';
   });
+
   chat.scrollTop = chat.scrollHeight;
 
   if (options.save) {
@@ -171,23 +176,20 @@ function addMessage(sender, text, cls, options={save:true}) {
   }
 }
 
-// --- TYPING INDICATOR ---
+/* Typing UI */
 function showTyping() {
   if (!document.getElementById('typing')) {
     const t = document.createElement('div');
     t.id = 'typing';
     t.className = 'message ai';
     t.textContent = 'AI is typing...';
-    t.style.background = themes[currentTheme].aiBubble;
+    t.style.background = (themes[currentTheme] || baseThemes.dark).aiBubble;
     document.getElementById('chat').appendChild(t);
   }
 }
-function hideTyping() {
-  const t = document.getElementById('typing');
-  if (t) t.remove();
-}
+function hideTyping() { const t = document.getElementById('typing'); if (t) t.remove(); }
 
-// --- SEND MESSAGE ---
+/* Send message */
 async function sendMessage() {
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
@@ -195,7 +197,6 @@ async function sendMessage() {
   addMessage('You', text, 'user');
   prompt.value = '';
   showTyping();
-
   try {
     const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
     const reply = await res.text();
@@ -203,62 +204,65 @@ async function sendMessage() {
     addMessage('AI', reply, 'ai');
   } catch {
     hideTyping();
-    addMessage('System', 'Error connecting to API.', 'system');
+    addMessage('System', 'Error connecting to API', 'system');
   }
 }
+
+/* Wire Send + Enter */
 document.getElementById('sendBtn').onclick = sendMessage;
 document.getElementById('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
-// --- CLEAR MEMORY ---
-document.getElementById('clearMemory').addEventListener('click', async()=>{
+/* Clear memory */
+document.getElementById('clearMemory').addEventListener('click', async () => {
   await fetch(`/api?clear=true`);
   document.getElementById('chat').innerHTML = '';
   chatHistory = [];
   localStorage.removeItem('chatHistory');
-  addMessage('System','Memory cleared!','system');
+  addMessage('System', 'Memory cleared!', 'system', { save: false });
 });
 
-// --- THEME SELECTOR ---
+/* Theme selector */
 document.getElementById('themeSelector').addEventListener('change', e => {
-  const val = e.target.value;
-  localStorage.setItem('theme', val);
-  applyTheme(val);
+  const v = e.target.value;
+  localStorage.setItem('theme', v);
+  applyTheme(v);
 });
 const savedTheme = localStorage.getItem('theme');
-if (savedTheme && themes[savedTheme]) applyTheme(savedTheme);
-else applyTheme('dark');
+if (savedTheme && themes[savedTheme]) applyTheme(savedTheme); else applyTheme('dark');
 
-// --- HISTORY BUTTON ---
+/* HISTORY - show stored memory (chatHistory), not DOM only */
 const historyBtn = document.getElementById('historyBtn');
 const historyFrame = document.getElementById('historyFrame');
 const closeHistory = document.getElementById('closeHistory');
+
 historyBtn.onclick = () => {
+  const theme = themes[currentTheme] || baseThemes.dark;
   const html = `
-    <html><head><style>
-      body{font-family:sans-serif;background:${themes[currentTheme].chatBackground};color:${themes[currentTheme].inputText};padding:1em;}
-      .message{margin-bottom:8px;}
-      .user{color:${themes[currentTheme].userBubble};}
-      .ai{color:${themes[currentTheme].aiBubble};}
-      .system{color:${themes[currentTheme].systemText};font-style:italic;}
+    <html><head><meta charset="utf-8"><title>History</title>
+    <style>
+      body{font-family:sans-serif;background:${theme.chatBackground};color:${theme.inputText};padding:1rem;}
+      .message{margin-bottom:8px;padding:.25rem .5rem;border-radius:6px;}
+      .user{background:${theme.userBubble};color:${theme.inputText};}
+      .ai{background:${theme.aiBubble};color:#000;}
+      .system{color:${theme.systemText};font-style:italic;}
     </style></head><body>
-      ${chatHistory.map(m=>`<div class="message ${m.cls}"><b>${m.sender}:</b> ${m.text}</div>`).join('')}
-    </body></html>`;
-  const blob = new Blob([html], {type:'text/html'});
+      ${chatHistory.map(m => `<div class="message ${m.cls}"><b>${m.sender}:</b> ${m.text}</div>`).join('')}
+    </body></html>
+  `;
+  const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   historyFrame.src = url;
   historyFrame.style.display = 'block';
   closeHistory.style.display = 'block';
 };
-closeHistory.onclick = () => {
-  historyFrame.style.display = 'none';
-  closeHistory.style.display = 'none';
-};
+closeHistory.onclick = () => { historyFrame.style.display = 'none'; closeHistory.style.display = 'none'; };
 
-// --- EXPORT CHAT ---
+/* Export Chat button (visible inline) */
 const exportBtn = document.createElement('button');
 exportBtn.textContent = 'Export Chat';
+exportBtn.style.marginLeft = '0.5em';
 exportBtn.onclick = () => {
-  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], {type: 'application/json'});
+  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = 'chat_history.json'; a.click();
@@ -266,21 +270,48 @@ exportBtn.onclick = () => {
 };
 document.getElementById('inputArea').appendChild(exportBtn);
 
-// --- IMPORT CHAT ---
-document.getElementById('importChatBtn').onclick = ()=>document.getElementById('importChatFile').click();
-document.getElementById('importChatFile').addEventListener('change', async e=>{
+/* IMPORT chat - becomes new memory, no duplicates */
+const importChatBtn = document.getElementById('importChatBtn');
+const importChatFile = document.getElementById('importChatFile');
+importChatBtn.onclick = () => importChatFile.click();
+
+importChatFile.addEventListener('change', async e => {
   const file = e.target.files[0];
-  if(!file) return;
+  if (!file) return;
   const text = await file.text();
-  try{
+  try {
     const imported = JSON.parse(text);
+    if (!Array.isArray(imported)) throw new Error('Expected array');
+
+    // Replace current chat view and memory with imported
     document.getElementById('chat').innerHTML = '';
     chatHistory = [];
-    imported.forEach(m => addMessage(m.sender, m.text, m.cls, {save:true}));
+
+    // Add each message and save to chatHistory (no double-save)
+    imported.forEach(m => addMessage(m.sender, m.text, m.cls, { save: true }));
+
+    // make sure saved locally
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-    addMessage('System', 'Chat imported successfully!', 'system', { save:false });
+
+    // optionally sync to backend memory
+    try {
+      await fetch('/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memory: chatHistory })
+      });
+    } catch (e) {
+      // backend sync optional — ignore failures gracefully
+      console.warn('Backend memory sync failed', e);
+    }
+
+    // notify
+    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
   } catch {
-    alert('Invalid chat file.');
+    alert('Invalid chat file (expected JSON array of messages).');
+  } finally {
+    // clear input so same file can be reselected if needed
+    importChatFile.value = '';
   }
 });
 </script>
