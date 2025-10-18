@@ -440,8 +440,7 @@ importFile.addEventListener('change', async e => {
 const exportBtn = document.getElementById('exportThemeBtn');
 
 exportBtn.onclick = () => {
-  // Get currently applied theme colors
-  let theme = customThemes[currentTheme] || {
+  const theme = {
     background: document.getElementById("bgColor").value,
     chatBackground: document.getElementById("chatBgColor").value,
     userBubble: document.getElementById("userColor").value,
@@ -449,17 +448,8 @@ exportBtn.onclick = () => {
     systemText: document.getElementById("systemColor").value,
     inputBackground: "#222",
     inputText: "#fff",
+    name: "CustomTheme_" + Date.now()
   };
-
-  // Ensure it has a name
-  if (!theme.name) theme.name = "CustomTheme_" + Date.now();
-
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
-  const dlAnchor = document.createElement('a');
-  dlAnchor.setAttribute("href", dataStr);
-  dlAnchor.setAttribute("download", theme.name + ".json");
-  dlAnchor.click();
-};
 
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
   const dlAnchor = document.createElement('a');
