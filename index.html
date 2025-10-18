@@ -68,6 +68,8 @@
   <div style="text-align:center;">
     <button id="previewTheme">Preview</button>
     <button id="saveTheme">Save</button>
+    <button id="importThemeBtn" style="background:#50fa7b;color:white;margin-top:5px;">Import Theme</button>
+      <input type="file" id="importThemeFile" accept=".json" style="display:none;">
     <button id="closeTheme">Close</button>
   </div>
 </div>
@@ -121,7 +123,6 @@ const baseThemes = {
 
 const themes = {...baseThemes, ...customThemes};
 
-// --- THEME FUNCTION ---
 function applyTheme(name, overrideTheme) {
   const theme = overrideTheme || themes[name] || baseThemes.dark;
   currentTheme = name;
@@ -145,8 +146,7 @@ function applyTheme(name, overrideTheme) {
   const typing = document.getElementById('typing');
   if (typing) typing.style.background = theme.aiBubble;
 }
-
-// --- MESSAGE ANIMATIONS ---
+  
 function animateMessage(el) {
   el.style.opacity = '0';
   el.style.transform = 'translateY(10px)';
@@ -157,7 +157,6 @@ function animateMessage(el) {
   });
 }
 
-// --- ADD MESSAGE ---
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
   const msg = document.createElement('div');
@@ -177,7 +176,6 @@ function addMessage(sender, text, cls) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-// --- TYPING INDICATOR ---
 function showTyping() {
   if (!document.getElementById('typing')) {
     const t = document.createElement('div');
@@ -195,7 +193,6 @@ function hideTyping() {
   if (t) t.remove();
 }
 
-// --- SEND MESSAGE ---
 async function sendMessage() {
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
@@ -222,14 +219,12 @@ document.getElementById('prompt').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendMessage();
 });
 
-// --- CLEAR MEMORY ---
 document.getElementById('clearMemory').addEventListener('click', async () => {
   await fetch(`/api?clear=true`);
   document.getElementById('chat').innerHTML = '';
   addMessage('System', 'Memory cleared!', 'system');
 });
 
-// --- HISTORY ---
 const historyBtn = document.getElementById('historyBtn');
 const historyFrame = document.getElementById('historyFrame');
 const closeHistory = document.getElementById('closeHistory');
@@ -249,7 +244,6 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// --- SEARCH ---
 document.getElementById('searchBar').addEventListener('input', e => {
   const term = e.target.value.toLowerCase();
   document.querySelectorAll('#chat .message').forEach(m => {
@@ -258,14 +252,12 @@ document.getElementById('searchBar').addEventListener('input', e => {
   });
 });
 
-// --- THEME SELECTOR ---
 document.getElementById('themeSelector').addEventListener('change', e => {
   const val = e.target.value;
   localStorage.setItem('theme', val);
   applyTheme(val);
 });
 
-// --- LOAD SAVED THEME ---
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme && themes[savedTheme]) {
   applyTheme(savedTheme);
@@ -274,7 +266,6 @@ if (savedTheme && themes[savedTheme]) {
   applyTheme('dark');
 }
 
-// --- STYLE ---
 const style = document.createElement('style');
 style.textContent = `
 @keyframes pulse {
@@ -295,7 +286,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// --- CUSTOM THEMES MENU ---
 const modsbtn = document.getElementById('modsbtn');
 const menu = document.createElement('div');
 menu.id = 'customThemesMenu';
@@ -363,7 +353,6 @@ menu.addEventListener('click', e => {
   }
 });
 
-// --- CUSTOM THEME CREATOR MODAL ---
 const modal = document.getElementById("customThemeModal");
 const closeTheme = document.getElementById("closeTheme");
 const previewTheme = document.getElementById("previewTheme");
@@ -407,9 +396,38 @@ saveTheme.onclick = () => {
   refreshCustomThemesList();
 };
 
-// --- LOAD SAVED CUSTOM THEME ---
 const savedCustom = localStorage.getItem("customTheme");
 if (savedCustom) applyTheme("custom", JSON.parse(savedCustom));
+
+const importBtn = document.getElementById('importThemeBtn');
+const importFile = document.getElementById('importThemeFile');
+
+importBtn.onclick = () => importFile.click();
+
+importFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const themeData = JSON.parse(text);
+    if (!themeData.name) throw new Error("Missing 'name'");
+    customThemes[themeData.name] = themeData;
+    localStorage.setItem('customThemes', JSON.stringify(customThemes));
+
+    // Add to theme selector
+    const opt = document.createElement('option');
+    opt.value = themeData.name;
+    opt.textContent = themeData.name + ' (Custom)';
+    document.getElementById('themeSelector').appendChild(opt);
+
+    refreshCustomThemesList();
+    alert(`Theme "${themeData.name}" imported!`);
+  } catch(err) {
+    console.error(err);
+    alert('Invalid theme file!');
+  }
+});
+
 </script>
 </body>
 </html>
