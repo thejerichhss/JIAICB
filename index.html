@@ -139,14 +139,18 @@ const themes = {
 function applyTheme(name) {
   const theme = themes[name] || themes.dark;
   currentTheme = name;
-  document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
-  document.getElementById('chat').style.transition = 'background 0.4s ease';
-  document.getElementById('prompt').style.transition = 'background 0.4s ease, color 0.4s ease';
+
+  // Smooth transition
+  document.body.style.transition =
+    document.getElementById('chat').style.transition =
+    document.getElementById('prompt').style.transition = 'all 0.5s ease';
 
   document.body.style.background = theme.background;
-  document.getElementById('chat').style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
+  const chat = document.getElementById('chat');
+  chat.style.background = theme.chatBackground;
+  const prompt = document.getElementById('prompt');
+  prompt.style.background = theme.inputBackground;
+  prompt.style.color = theme.inputText;
 
   document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
   document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
@@ -156,30 +160,30 @@ function applyTheme(name) {
   if (typing) typing.style.background = theme.aiBubble;
 }
 
-function animateMessage(el) {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(10px)';
-  requestAnimationFrame(() => {
-    el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    el.style.opacity = '1';
-    el.style.transform = 'translateY(0)';
-  });
-}
+document.getElementById('themeSelector').addEventListener('change', e => {
+  applyTheme(e.target.value);
+  localStorage.setItem('theme', e.target.value);
+});
+
+const savedTheme = localStorage.getItem('theme');
+if (savedTheme && themes[savedTheme]) {
+  applyTheme(savedTheme);
+  document.getElementById('themeSelector').value = savedTheme;
+} else applyTheme('dark');
 
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
+  if (sender === 'System') msg.style.textAlign = 'left';
   chat.appendChild(msg);
-  animateMessage(msg);
-
+  chat.scrollTop = chat.scrollHeight;
+  // Apply theme colors to new message
   const theme = themes[currentTheme];
   if (cls === 'user') msg.style.background = theme.userBubble;
   if (cls === 'ai') msg.style.background = theme.aiBubble;
   if (cls === 'system') msg.style.color = theme.systemText;
-
-  chat.scrollTop = chat.scrollHeight;
 }
 
 function showTyping() {
@@ -189,7 +193,7 @@ function showTyping() {
     t.className = 'message ai';
     t.textContent = 'AI is typing...';
     t.style.background = themes[currentTheme].aiBubble;
-    t.style.animation = 'pulse 1s infinite';
+    t.style.transition = 'background 0.5s ease';
     document.getElementById('chat').appendChild(t);
   }
 }
@@ -203,9 +207,11 @@ async function sendMessage() {
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
   if (!text) return;
-  document.querySelectorAll('.system').forEach(el => el.remove());
   addMessage('You', text, 'user');
   prompt.value = '';
+  document.querySelectorAll('.system').forEach(el => {
+    if (el.textContent.includes('Memory cleared!')) el.remove();
+  });
   showTyping();
   try {
     const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
@@ -243,6 +249,7 @@ closeHistory.onclick = () => {
 };
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
+    document.getElementById('modsPanel').style.display = 'none';
     historyFrame.style.display = 'none';
     closeHistory.style.display = 'none';
   }
@@ -256,65 +263,56 @@ document.getElementById('searchBar').addEventListener('input', e => {
   });
 });
 
-// THEMES MODAL BUTTON
-const themesBtn = document.getElementById('themesBtn');
-const themeModal = document.createElement('div');
-themeModal.id = 'themeModal';
-themeModal.style.position = 'fixed';
-themeModal.style.top = '50%';
-themeModal.style.left = '50%';
-themeModal.style.transform = 'translate(-50%, -50%)';
-themeModal.style.background = '#000a';
-themeModal.style.padding = '20px';
-themeModal.style.borderRadius = '12px';
-themeModal.style.display = 'none';
-themeModal.style.zIndex = '1000';
-themeModal.style.color = '#fff';
-themeModal.innerHTML = `
-  <h3 style="margin-bottom:10px;">Select Theme</h3>
-  <select id="themeSelector" style="width:100%;padding:5px;border-radius:6px;"></select><br><br>
-  <button id="closeTheme" style="padding:5px 10px;border:none;border-radius:6px;background:#444;color:white;">Close</button>
-`;
-document.body.appendChild(themeModal);
+// === Mods Panel ===
+const modsBtn = document.getElementById('modsBtn');
+const modsPanel = document.getElementById('modsPanel');
+const closeMods = document.getElementById('closeMods');
 
-const themeSelector = themeModal.querySelector('#themeSelector');
-Object.keys(themes).forEach(name => {
-  const opt = document.createElement('option');
-  opt.value = name;
-  opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
-  themeSelector.appendChild(opt);
+modsBtn.onclick = () => modsPanel.style.display = 'block';
+closeMods.onclick = () => modsPanel.style.display = 'none';
+
+document.querySelectorAll('.colorInput').forEach(input => {
+  input.addEventListener('input', () => {
+    const theme = {};
+    document.querySelectorAll('.colorInput').forEach(i => theme[i.id] = i.value);
+    themes.custom = theme;
+    applyTheme('custom');
+  });
 });
 
-themesBtn.onclick = () => {
-  themeModal.style.display = 'block';
-};
-themeModal.querySelector('#closeTheme').onclick = () => {
-  themeModal.style.display = 'none';
-};
-
-themeSelector.addEventListener('change', e => {
-  const val = e.target.value;
-  localStorage.setItem('theme', val);
-  applyTheme(val);
+document.getElementById('applyCustomTheme').addEventListener('click', () => {
+  localStorage.setItem('theme', 'custom');
+  document.getElementById('themeSelector').value = 'custom';
 });
 
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme && themes[savedTheme]) {
-  applyTheme(savedTheme);
-  if (themeSelector) themeSelector.value = savedTheme;
-} else {
-  applyTheme('dark');
-}
+document.getElementById('saveTheme').addEventListener('click', () => {
+  const inputs = document.querySelectorAll('.colorInput');
+  const theme = {};
+  inputs.forEach(i => theme[i.id] = i.value);
+  const blob = new Blob([JSON.stringify(theme, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'custom_theme.json';
+  a.click();
+});
 
-const style = document.createElement('style');
-style.textContent = `
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-`;
-document.head.appendChild(style);
+document.getElementById('loadTheme').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const data = JSON.parse(ev.target.result);
+    themes.custom = data;
+    applyTheme('custom');
+    localStorage.setItem('theme', 'custom');
+    document.getElementById('themeSelector').value = 'custom';
+    for (const k in data) {
+      const input = document.getElementById(k);
+      if (input) input.value = data[k];
+    }
+  };
+  reader.readAsText(file);
+});
 </script>
 </body>
 </html>
