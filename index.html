@@ -139,19 +139,19 @@ const themes = {
 function applyTheme(name) {
   const theme = themes[name] || themes.dark;
   currentTheme = name;
+  document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
+  document.getElementById('chat').style.transition = 'background 0.4s ease';
+  document.getElementById('prompt').style.transition = 'background 0.4s ease, color 0.4s ease';
 
-  // Apply global theme colors
   document.body.style.background = theme.background;
   document.getElementById('chat').style.background = theme.chatBackground;
   document.getElementById('prompt').style.background = theme.inputBackground;
   document.getElementById('prompt').style.color = theme.inputText;
 
-  // Update chat message bubbles to match new theme
   document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
   document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
   document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
 
-  // Update typing indicator color
   const typing = document.getElementById('typing');
   if (typing) typing.style.background = theme.aiBubble;
 }
@@ -174,7 +174,6 @@ function addMessage(sender, text, cls) {
   chat.appendChild(msg);
   animateMessage(msg);
 
-  // Apply current theme to new message
   const theme = themes[currentTheme];
   if (cls === 'user') msg.style.background = theme.userBubble;
   if (cls === 'ai') msg.style.background = theme.aiBubble;
@@ -257,7 +256,43 @@ document.getElementById('searchBar').addEventListener('input', e => {
   });
 });
 
-document.getElementById('themeSelector').addEventListener('change', e => {
+// THEMES MODAL BUTTON
+const themesBtn = document.getElementById('themesBtn');
+const themeModal = document.createElement('div');
+themeModal.id = 'themeModal';
+themeModal.style.position = 'fixed';
+themeModal.style.top = '50%';
+themeModal.style.left = '50%';
+themeModal.style.transform = 'translate(-50%, -50%)';
+themeModal.style.background = '#000a';
+themeModal.style.padding = '20px';
+themeModal.style.borderRadius = '12px';
+themeModal.style.display = 'none';
+themeModal.style.zIndex = '1000';
+themeModal.style.color = '#fff';
+themeModal.innerHTML = `
+  <h3 style="margin-bottom:10px;">Select Theme</h3>
+  <select id="themeSelector" style="width:100%;padding:5px;border-radius:6px;"></select><br><br>
+  <button id="closeTheme" style="padding:5px 10px;border:none;border-radius:6px;background:#444;color:white;">Close</button>
+`;
+document.body.appendChild(themeModal);
+
+const themeSelector = themeModal.querySelector('#themeSelector');
+Object.keys(themes).forEach(name => {
+  const opt = document.createElement('option');
+  opt.value = name;
+  opt.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  themeSelector.appendChild(opt);
+});
+
+themesBtn.onclick = () => {
+  themeModal.style.display = 'block';
+};
+themeModal.querySelector('#closeTheme').onclick = () => {
+  themeModal.style.display = 'none';
+};
+
+themeSelector.addEventListener('change', e => {
   const val = e.target.value;
   localStorage.setItem('theme', val);
   applyTheme(val);
@@ -266,7 +301,7 @@ document.getElementById('themeSelector').addEventListener('change', e => {
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme && themes[savedTheme]) {
   applyTheme(savedTheme);
-  document.getElementById('themeSelector').value = savedTheme;
+  if (themeSelector) themeSelector.value = savedTheme;
 } else {
   applyTheme('dark');
 }
