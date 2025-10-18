@@ -105,6 +105,7 @@
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 <script>
+console.log("Script loaded!");
 let currentTheme = 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 let chatHistory = [];
@@ -325,8 +326,10 @@ function refreshCustomThemesList() {
 }
 
 modsbtn.onclick = () => {
+  // Open the creator modal by default
+  modal.style.display = "block";
+  // Also refresh custom themes list (so both features stay active)
   refreshCustomThemesList();
-  menu.style.display = 'block';
 };
 document.getElementById('closeMods').onclick = () => menu.style.display = 'none';
 
