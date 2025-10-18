@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <title>JIAICB (V0.73)</title>
 <style>
-  body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-  #chat { flex: 1; padding: 1em; overflow-y: auto; background: #222; border-bottom: 1px solid #333; text-align: left; }
+  body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display: flex; flex-direction: column; height: 100vh; transition: background 0.3s, color 0.3s; }
+  #chat { flex: 1; padding: 1em; overflow-y: auto; background: #222; border-bottom: 1px solid #333; }
   .message { display: block; padding: 0.5em 1em; border-radius: 15px; margin: 0.25em 0; max-width: 70%; word-wrap: break-word; position: relative; }
-  .user { align-self: flex-end; background: #6272a4; color: #fff; text-align: left; }
-  .ai { align-self: flex-start; background: #50fa7b; color: #111; text-align: left; }
+  .user { align-self: flex-end; background: #6272a4; color: #fff; }
+  .ai { align-self: flex-start; background: #50fa7b; color: #111; }
   .system { text-align: left; font-style: italic; color: #ff5555; }
   .messageText { display: block; margin-top: 0.25em; }
   #inputArea { display: flex; padding: .5em; background: #111; }
@@ -19,38 +19,16 @@
   #historyBtn { background: #ffee8c; color: black; }
   #historyFrame { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); width:95%; height:80%; border:2px solid #50fa7b; background:#111; color:white; overflow-y:auto; z-index:9999; }
   #closeHistory { display:none; position:fixed; top:5%; right:5%; z-index:10000; padding:.5em 1em; border:none; border-radius:5px; background:#ff5555; color:white; cursor:pointer; }
-  #searchBar { padding: 0.5em; margin: 0.5em; width: 80%; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff; }
+  #searchBar { padding:0.5em; margin:0.5em; width:80%; border-radius:5px; border:1px solid #444; background:#222; color:#fff; }
   /* Custom Theme Modal */
-  #customThemeModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
-    background:#111; color:#fff; border:2px solid #50fa7b; border-radius:15px;
-    padding:1em; z-index:10000; width:350px; max-height:80%; overflow-y:auto; box-shadow:0 0 20px #50fa7b; }
+  #customThemeModal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#111; color:#fff; border:2px solid #50fa7b; border-radius:15px; padding:1em; z-index:10000; width:350px; max-height:80%; overflow-y:auto; box-shadow:0 0 20px #50fa7b; }
+  #customThemeList { list-style:none; padding:5px; max-height:150px; overflow-y:auto; border:1px solid #444; border-radius:5px; }
   #customThemeList li { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
 </style>
 </head>
 <body>
-
-<!-- Custom Theme Modal -->
-<div id="customThemeModal">
-  <h3 style="text-align:center;">V1.0 Custom Theme Creator</h3>
-  <label>Background:</label><input type="color" id="bgColor" value="#111"><br><br>
-  <label>Chat Background:</label><input type="color" id="chatBgColor" value="#222"><br><br>
-  <label>User Bubble:</label><input type="color" id="userColor" value="#6272a4"><br><br>
-  <label>AI Bubble:</label><input type="color" id="aiColor" value="#50fa7b"><br><br>
-  <label>System Text:</label><input type="color" id="systemColor" value="#ff5555"><br><br>
-
-  <h4>Saved Themes</h4>
-  <ul id="customThemeList" style="list-style:none; padding:5px; border:1px solid #444; border-radius:5px; max-height:150px; overflow-y:auto;"></ul>
-
-  <div style="text-align:center; margin-top:10px;">
-    <button id="previewTheme">Preview</button>
-    <button id="saveTheme">Save</button>
-    <button id="exportThemeBtn" style="background:#00bfff;color:white;">Export Theme</button>
-    <button id="importThemeBtn" style="background:#50fa7b;color:white;">Import Theme</button>
-    <input type="file" id="importThemeFile" accept=".json" style="display:none;">
-    <button id="closeTheme" style="background:#ff5555;color:white;">Close</button>
-  </div>
-</div>
-
+<!-- Buttons -->
+<button id="modsbtn" style="margin:10px;">Custom Themes</button>
 <input id="searchBar" type="text" placeholder="Search messages..." />
 <select id="themeSelector">
   <optgroup label="Classic Themes">
@@ -80,143 +58,193 @@
   <button id="exportChatBtn">Export Chat</button>
   <button id="importChatBtn">Import Chat</button>
   <input type="file" id="importChatFile" accept=".json" style="display:none;">
-  <button id="modsbtn">Custom Themes</button>
 </div>
 
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 
+<!-- Custom Theme Modal -->
+<div id="customThemeModal">
+  <h3 style="text-align:center;">V1.0 Custom Theme Creator</h3>
+  <label>Background:</label><input type="color" id="bgColor" value="#111"><br><br>
+  <label>Chat Background:</label><input type="color" id="chatBgColor" value="#222"><br><br>
+  <label>User Bubble:</label><input type="color" id="userColor" value="#6272a4"><br><br>
+  <label>AI Bubble:</label><input type="color" id="aiColor" value="#50fa7b"><br><br>
+  <label>System Text:</label><input type="color" id="systemColor" value="#ff5555"><br><br>
+  <h4>Saved Themes</h4>
+  <ul id="customThemeList"></ul>
+  <div style="text-align:center; margin-top:10px;">
+    <button id="previewTheme">Preview</button>
+    <button id="saveTheme">Save</button>
+    <button id="exportThemeBtn" style="background:#00bfff;color:white;">Export Theme</button>
+    <button id="importThemeBtn" style="background:#50fa7b;color:white;">Import Theme</button>
+    <input type="file" id="importThemeFile" accept=".json" style="display:none;">
+    <button id="closeTheme" style="background:#ff5555;color:white;">Close</button>
+  </div>
+</div>
+
 <script>
 console.log("Script loaded!");
 
 let currentTheme = 'dark';
-let chatHistory = [];
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
+let chatHistory = [];
 
+// Base themes
 const baseThemes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
   light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
-  // add more as needed
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
+  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
+  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
+  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
+  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
+  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
+  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
+  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
+  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
 };
 
 const themes = {...baseThemes, ...customThemes};
 
-// ---------------- Theme Functions ----------------
-function applyTheme(name, overrideTheme) {
+// Grab color pickers
+const bgColor = document.getElementById('bgColor');
+const chatBgColor = document.getElementById('chatBgColor');
+const userColor = document.getElementById('userColor');
+const aiColor = document.getElementById('aiColor');
+const systemColor = document.getElementById('systemColor');
+
+function applyTheme(name, overrideTheme){
   const theme = overrideTheme || customThemes[name] || baseThemes[name] || baseThemes.dark;
   currentTheme = name;
+
   document.body.style.background = theme.background;
   document.getElementById('chat').style.background = theme.chatBackground;
   document.getElementById('prompt').style.background = theme.inputBackground;
   document.getElementById('prompt').style.color = theme.inputText;
-  document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
-  document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
+
+  document.querySelectorAll('.user').forEach(el=>el.style.background=theme.userBubble);
+  document.querySelectorAll('.ai').forEach(el=>el.style.background=theme.aiBubble);
+  document.querySelectorAll('.system').forEach(el=>el.style.color=theme.systemText);
+
+  if(overrideTheme){
+    bgColor.value = theme.background;
+    chatBgColor.value = theme.chatBackground;
+    userColor.value = theme.userBubble;
+    aiColor.value = theme.aiBubble;
+    systemColor.value = theme.systemText;
+  }
 }
 
-document.getElementById('themeSelector').addEventListener('change', e => {
-  const val = e.target.value;
-  localStorage.setItem('theme', val);
-  applyTheme(val);
-});
-
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme && themes[savedTheme]) {
-  applyTheme(savedTheme);
-  document.getElementById('themeSelector').value = savedTheme;
-} else {
-  applyTheme('dark');
+function animateMessage(el){
+  el.style.opacity='0';
+  el.style.transform='translateY(10px)';
+  requestAnimationFrame(()=>{ el.style.transition='opacity 0.3s, transform 0.3s'; el.style.opacity='1'; el.style.transform='translateY(0)'; });
 }
 
-// ---------------- Chat Functions ----------------
-function animateMessage(el) {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(10px)';
-  requestAnimationFrame(() => {
-    el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    el.style.opacity = '1';
-    el.style.transform = 'translateY(0)';
-  });
-}
-
-function addMessage(sender, text, cls) {
+function addMessage(sender,text,cls){
   const chat = document.getElementById('chat');
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
   chat.appendChild(msg);
   animateMessage(msg);
+  const theme = themes[currentTheme];
+  if(cls==='user') msg.style.background = theme.userBubble;
+  if(cls==='ai') msg.style.background = theme.aiBubble;
+  if(cls==='system') msg.style.color = theme.systemText;
   chat.scrollTop = chat.scrollHeight;
   chatHistory.push({sender,text,cls});
 }
 
-async function sendMessage() {
-  const prompt = document.getElementById('prompt');
-  const text = prompt.value.trim();
-  if (!text) return;
-  addMessage('You', text, 'user');
-  prompt.value = '';
+function showTyping(){
+  if(!document.getElementById('typing')){
+    const t = document.createElement('div');
+    t.id='typing';
+    t.className='message ai';
+    t.textContent='AI is typing...';
+    t.style.background = themes[currentTheme].aiBubble;
+    t.style.animation='pulse 1s infinite';
+    document.getElementById('chat').appendChild(t);
+  }
+}
+function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
 
-  // show typing placeholder
-  const t = document.createElement('div'); t.className='message ai'; t.id='typing'; t.textContent='AI is typing...';
-  t.style.background = themes[currentTheme]?.aiBubble; document.getElementById('chat').appendChild(t);
-
-  try {
+async function sendMessage(){
+  const prompt=document.getElementById('prompt');
+  const text=prompt.value.trim();
+  if(!text) return;
+  addMessage('You',text,'user');
+  prompt.value='';
+  showTyping();
+  try{
     const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
     const reply = await res.text();
-    document.getElementById('typing')?.remove();
-    addMessage('AI', reply, 'ai');
-  } catch {
-    document.getElementById('typing')?.remove();
+    hideTyping();
+    addMessage('AI',reply,'ai');
+  }catch{
+    hideTyping();
     addMessage('System','Error connecting to API','system');
   }
 }
 
 document.getElementById('sendBtn').onclick = sendMessage;
-document.getElementById('prompt').addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
-document.getElementById('clearMemory').onclick = async () => {
-  await fetch(`/api?clear=true`);
-  chatHistory=[]; document.getElementById('chat').innerHTML='';
+document.getElementById('prompt').addEventListener('keydown',e=>{ if(e.key==='Enter') sendMessage(); });
+
+// Clear memory
+document.getElementById('clearMemory').addEventListener('click',()=>{
+  chatHistory=[];
+  document.getElementById('chat').innerHTML='';
   addMessage('System','Memory cleared!','system');
-};
-
-// ---------------- Chat History Import/Export ----------------
-document.getElementById('exportChatBtn').onclick = () => {
-  const blob = new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download='chat_history.json'; a.click();
-  URL.revokeObjectURL(url);
-};
-
-document.getElementById('importChatBtn').onclick = () => document.getElementById('importChatFile').click();
-document.getElementById('importChatFile').addEventListener('change', async e => {
-  const file = e.target.files[0]; if(!file) return;
-  const text = await file.text();
-  try{
-    const imported = JSON.parse(text);
-    document.getElementById('chat').innerHTML='';
-    chatHistory=[];
-    imported.forEach(msg => addMessage(msg.sender,msg.text,msg.cls));
-    // Update backend memory if needed
-    await fetch(`/api?importMemory=true`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(imported)});
-  }catch{
-    alert('Invalid chat file!');
-  }
 });
 
-// ---------------- History iframe ----------------
-const historyBtn=document.getElementById('historyBtn'), historyFrame=document.getElementById('historyFrame'), closeHistory=document.getElementById('closeHistory');
-historyBtn.onclick=()=>{ historyFrame.src="/api?view=history"; historyFrame.style.display='block'; closeHistory.style.display='block'; };
-closeHistory.onclick=()=>{ historyFrame.style.display='none'; closeHistory.style.display='none'; };
-document.addEventListener('keydown', e=>{if(e.key==='Escape'){historyFrame.style.display='none'; closeHistory.style.display='none';}});
+// History iframe
+const historyBtn = document.getElementById('historyBtn');
+const historyFrame = document.getElementById('historyFrame');
+const closeHistory = document.getElementById('closeHistory');
+historyBtn.onclick = ()=>{
+  historyFrame.src = "/api?view=history";
+  historyFrame.style.display='block';
+  closeHistory.style.display='block';
+};
+closeHistory.onclick = ()=>{ historyFrame.style.display='none'; closeHistory.style.display='none'; };
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'){ historyFrame.style.display='none'; closeHistory.style.display='none'; } });
 
-// ---------------- Custom Theme Modal ----------------
-const modsbtn=document.getElementById('modsbtn'), modal=document.getElementById('customThemeModal');
+// Search messages
+document.getElementById('searchBar').addEventListener('input',e=>{
+  const term=e.target.value.toLowerCase();
+  document.querySelectorAll('#chat .message').forEach(m=>{
+    const text=m.textContent.toLowerCase();
+    m.style.display = term && !text.includes(term) ? 'none':'block';
+  });
+});
+
+// Theme selector
+document.getElementById('themeSelector').addEventListener('change',e=>{
+  const val=e.target.value;
+  applyTheme(val);
+  localStorage.setItem('theme',val);
+});
+
+// Saved theme
+const savedTheme = localStorage.getItem('theme');
+if(savedTheme && (baseThemes[savedTheme] || customThemes[savedTheme])){
+  applyTheme(savedTheme);
+  document.getElementById('themeSelector').value = savedTheme;
+}else applyTheme('dark');
+
+// Custom Theme Modal
+const modsbtn = document.getElementById('modsbtn');
+const modal = document.getElementById('customThemeModal');
+modsbtn.onclick = ()=> modal.style.display='block';
+document.getElementById('closeTheme').onclick = ()=> modal.style.display='none';
+
+// Refresh custom themes list
 function refreshCustomThemesList(){
-  const list=document.getElementById('customThemeList'); list.innerHTML='';
+  const list = document.getElementById('customThemeList');
+  list.innerHTML='';
   for(const [name,data] of Object.entries(customThemes)){
-    const li=document.createElement('li');
+    const li = document.createElement('li');
     li.innerHTML=`<span>${name}</span>
       <div>
         <button class="applyBtn" data-name="${name}" style="background:#50fa7b;margin-right:4px;">Apply</button>
@@ -225,58 +253,88 @@ function refreshCustomThemesList(){
     list.appendChild(li);
   }
 }
+refreshCustomThemesList();
 
-modsbtn.onclick=()=>{ modal.style.display='block'; refreshCustomThemesList(); };
-document.getElementById('closeTheme').onclick=()=> modal.style.display='none';
-
-document.getElementById("previewTheme").onclick=()=>{
-  applyTheme('custom',{
-    background:bgColor.value,chatBackground:chatBgColor.value,
-    userBubble:userColor.value,aiBubble:aiColor.value,
-    systemText:systemColor.value,inputBackground:'#222',inputText:'#fff'
-  });
+// Preview + Save
+document.getElementById('previewTheme').onclick=()=>{
+  const theme = { background:bgColor.value, chatBackground:chatBgColor.value, userBubble:userColor.value, aiBubble:aiColor.value, systemText:systemColor.value, inputBackground:"#222", inputText:"#fff" };
+  applyTheme("custom",theme);
 };
 
-document.getElementById("saveTheme").onclick=()=>{
-  const name="Custom_"+Date.now();
-  const theme={background:bgColor.value,chatBackground:chatBgColor.value,userBubble:userColor.value,aiBubble:aiColor.value,systemText:systemColor.value,inputBackground:'#222',inputText:'#fff',name};
-  customThemes[name]=theme; localStorage.setItem('customThemes',JSON.stringify(customThemes));
-  const opt=document.createElement('option'); opt.value=name; opt.textContent=name+' (Custom)'; document.getElementById('themeSelector').appendChild(opt);
-  applyTheme(name,theme); refreshCustomThemesList(); modal.style.display='none';
+document.getElementById('saveTheme').onclick=()=>{
+  const theme={ background:bgColor.value, chatBackground:chatBgColor.value, userBubble:userColor.value, aiBubble:aiColor.value, systemText:systemColor.value, inputBackground:"#222", inputText:"#fff", name:"Custom_"+Date.now() };
+  customThemes[theme.name]=theme;
+  localStorage.setItem('customThemes',JSON.stringify(customThemes));
+  const opt=document.createElement('option'); opt.value=theme.name; opt.textContent=theme.name+' (Custom)';
+  document.getElementById('themeSelector').appendChild(opt);
+  applyTheme(theme.name,theme);
+  refreshCustomThemesList();
+  modal.style.display='none';
 };
+
+// Apply/Delete in modal
+document.getElementById('customThemeList').addEventListener('click',e=>{
+  if(e.target.classList.contains('applyBtn')){
+    const name=e.target.dataset.name;
+    applyTheme(name);
+    document.getElementById('themeSelector').value=name;
+  }else if(e.target.classList.contains('deleteBtn')){
+    const name=e.target.dataset.name;
+    delete customThemes[name];
+    localStorage.setItem('customThemes',JSON.stringify(customThemes));
+    document.querySelector(`#themeSelector option[value="${name}"]`)?.remove();
+    refreshCustomThemesList();
+  }
+});
 
 // Import/export theme
-document.getElementById('importThemeBtn').onclick=()=>importThemeFile.click();
-document.getElementById('importThemeFile').addEventListener('change', async e=>{
-  const file=e.target.files[0]; if(!file) return; const text=await file.text();
+const importThemeFile = document.getElementById('importThemeFile');
+document.getElementById('importThemeBtn').onclick=()=> importThemeFile.click();
+importThemeFile.addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const text = await file.text();
   try{
-    const themeData=JSON.parse(text);
-    customThemes[themeData.name]=themeData; localStorage.setItem('customThemes',JSON.stringify(customThemes));
-    const opt=document.createElement('option'); opt.value=themeData.name; opt.textContent=themeData.name+' (Custom)';
-    document.getElementById('themeSelector').appendChild(opt); refreshCustomThemesList(); alert(`Theme "${themeData.name}" imported!`);
-  }catch{alert('Invalid theme file!');}
+    const data = JSON.parse(text);
+    customThemes[data.name]=data;
+    localStorage.setItem('customThemes',JSON.stringify(customThemes));
+    const opt=document.createElement('option'); opt.value=data.name; opt.textContent=data.name+' (Custom)';
+    document.getElementById('themeSelector').appendChild(opt);
+    refreshCustomThemesList();
+    alert(`Theme "${data.name}" imported!`);
+  }catch{ alert('Invalid theme file!'); }
 });
 
 document.getElementById('exportThemeBtn').onclick=()=>{
-  const theme={background:bgColor.value,chatBackground:chatBgColor.value,userBubble:userColor.value,aiBubble:aiColor.value,systemText:systemColor.value,inputBackground:'#222',inputText:'#fff',name:"CustomTheme_"+Date.now()};
-  const blob=new Blob([JSON.stringify(theme,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=theme.name+".json"; a.click(); URL.revokeObjectURL(url);
+  const theme={ background:bgColor.value, chatBackground:chatBgColor.value, userBubble:userColor.value, aiBubble:aiColor.value, systemText:systemColor.value, inputBackground:"#222", inputText:"#fff", name:"CustomTheme_"+Date.now() };
+  const blob = new Blob([JSON.stringify(theme,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=theme.name+".json"; a.click();
+  URL.revokeObjectURL(url);
 };
 
-// Handle apply/delete buttons in modal
-document.getElementById('customThemeList').addEventListener('click', e=>{
-  if(e.target.classList.contains('applyBtn')){ const name=e.target.dataset.name; applyTheme(name); document.getElementById('themeSelector').value=name; }
-  else if(e.target.classList.contains('deleteBtn')){ const name=e.target.dataset.name; delete customThemes[name]; localStorage.setItem('customThemes',JSON.stringify(customThemes));
-    document.querySelector(`#themeSelector option[value="${name}"]`)?.remove(); refreshCustomThemesList(); }
-});
-
-// ---------------- Search ----------------
-document.getElementById('searchBar').addEventListener('input', e=>{
-  const term=e.target.value.toLowerCase();
-  document.querySelectorAll('#chat .message').forEach(m=>{
-    const text=m.textContent.toLowerCase();
-    m.style.display = term && !text.includes(term) ? 'none' : 'block';
-  });
+// Chat export/import
+const exportChatBtn = document.getElementById('exportChatBtn');
+exportChatBtn.onclick = ()=>{
+  const blob = new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='chat_history.json'; a.click();
+  URL.revokeObjectURL(url);
+};
+const importChatBtn = document.getElementById('importChatBtn');
+const importChatFile = document.getElementById('importChatFile');
+importChatBtn.onclick = ()=> importChatFile.click();
+importChatFile.addEventListener('change',async e=>{
+  const file = e.target.files[0]; if(!file) return;
+  const text = await file.text();
+  try{
+    const data = JSON.parse(text);
+    if(Array.isArray(data)){
+      chatHistory = data; // merge into memory
+      document.getElementById('chat').innerHTML=''; // clear chat
+      data.forEach(msg => addMessage(msg.sender,msg.text,msg.cls));
+      alert('Chat imported!');
+    }else alert('Invalid chat file!');
+  }catch{ alert('Error parsing chat file!'); }
 });
 </script>
 </body>
