@@ -89,6 +89,11 @@
 let currentTheme = 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 let chatHistory = [];
+const savedChat = localStorage.getItem('chatHistory');
+if (savedChat) {
+  chatHistory = JSON.parse(savedChat);
+  chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
+}
 
 // --- THEMES ---
 const baseThemes = {
@@ -153,8 +158,11 @@ function addMessage(sender, text, cls, options={save:true}) {
   chat.appendChild(msg);
   chat.scrollTop = chat.scrollHeight;
 
-  if (options.save) chatHistory.push({sender, text, cls});
+if (options.save) {
+  chatHistory.push({ sender, text, cls });
+  localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
 }
+
 
 // --- TYPING INDICATOR ---
 function showTyping() {
@@ -195,12 +203,13 @@ document.getElementById('sendBtn').onclick = sendMessage;
 document.getElementById('prompt').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
 // --- CLEAR MEMORY ---
-document.getElementById('clearMemory').onclick = async () => {
+document.getElementById('clearMemory').addEventListener('click', async()=>{
   await fetch(`/api?clear=true`);
   document.getElementById('chat').innerHTML = '';
   chatHistory = [];
-  addMessage('System', 'Memory cleared!', 'system');
-};
+  localStorage.removeItem('chatHistory');
+  addMessage('System','Memory cleared!','system');
+});
 
 // --- THEME SELECTOR ---
 document.getElementById('themeSelector').addEventListener('change', e => {
@@ -263,6 +272,39 @@ document.getElementById('importChatFile').addEventListener('change', async e=>{
     imported.forEach(m => addMessage(m.sender, m.text, m.cls, {save:true}));
   } catch {
     alert('Invalid chat file.');
+  }
+});
+
+importChatFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const importedChat = JSON.parse(text);
+
+    // Reset chat view and memory
+    document.getElementById('chat').innerHTML = '';
+    chatHistory = [];
+
+    // Add each message and save to chatHistory
+    importedChat.forEach(msg => {
+      addMessage(msg.sender, msg.text, msg.cls, { save: true });
+    });
+
+    // Save imported chat to localStorage so it becomes the active memory
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+
+    // Sync with backend memory (if applicable)
+    await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ memory: chatHistory })
+    });
+
+    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
+
+  } catch {
+    alert('Invalid chat file!');
   }
 });
 </script>
