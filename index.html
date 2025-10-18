@@ -291,9 +291,6 @@ importChatFile.addEventListener('change', async e => {
   try {
     const importedChat = JSON.parse(text);
 
-    // Clear current chat
-    document.getElementById('chat').innerHTML = '';
-
     // Replace chatHistory with imported chat
     chatHistory = importedChat.map(msg => ({ ...msg }));
 
