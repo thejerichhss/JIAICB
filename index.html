@@ -283,7 +283,7 @@ const importChatBtn=document.getElementById('importChatBtn');
 const importChatFile=document.getElementById('importChatFile');
 importChatBtn.onclick=()=>importChatFile.click();
   
-importChatFile.addEventListener('change', async e => {
+document.getElementById('importChatFile').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -291,11 +291,11 @@ importChatFile.addEventListener('change', async e => {
   try {
     const importedChat = JSON.parse(text);
 
-    // Merge imported chat with current chatHistory
+    // Append imported chat to current chat
     importedChat.forEach(msg => {
-      addMessage(msg.sender, msg.text, msg.cls, { save: true });
-      chatHistory.push({ ...msg });
-    });
+    addMessage(msg.sender, msg.text, msg.cls, { save: false });
+    chatHistory.push({ ...msg });
+  });
 
     // Update backend memory
     await fetch('/api', {
