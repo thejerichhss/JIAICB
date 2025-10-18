@@ -254,18 +254,6 @@ if (savedTheme && themes[savedTheme]) {
 // --- Mods Menu + Theme Creator ---
 const modsbtn = document.getElementById('modsbtn');
 const modal = document.getElementById("customThemeModal");
-
-const menu = document.createElement('div');
-menu.id = 'customThemesMenu';
-menu.innerHTML = `
-  <h3>Custom Themes</h3>
-  <ul id="customThemeList"></ul>
-  <input type="file" id="themeUpload" accept=".json" style="margin-top:.5em;">
-  <br><br>
-  <button id="closeMods" style="background:#ff5555;color:white;">Close</button>
-`;
-document.body.appendChild(menu);
-
 function refreshCustomThemesList() {
   const list = document.getElementById('customThemeList');
   list.innerHTML = '';
