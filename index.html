@@ -120,34 +120,108 @@
 <iframe id="historyFrame"></iframe>
 <button id="closeHistory">Close History</button>
 <script>
-let currentTheme = 'dark';
 document.addEventListener("DOMContentLoaded", () => {
     const chatBox = document.getElementById("chatBox");
     const inputBox = document.getElementById("userInput");
-    const modsButton = document.getElementById("modsButton");
     const typingIndicator = document.createElement("div");
+    const modsButton = document.getElementById("modsButton");
+    const themeButton = document.getElementById("themeButton");
+
     typingIndicator.className = "typing-indicator";
     typingIndicator.textContent = "Typing...";
     typingIndicator.style.display = "none";
     chatBox.appendChild(typingIndicator);
 
-    // --- Custom Theme Modal ---
-    const themeModal = document.createElement("div");
-    themeModal.id = "themeModal";
-    themeModal.style.display = "none";
-    themeModal.style.position = "fixed";
-    themeModal.style.top = "50%";
-    themeModal.style.left = "50%";
-    themeModal.style.transform = "translate(-50%, -50%)";
-    themeModal.style.background = "var(--bg)";
-    themeModal.style.border = "2px solid var(--accent)";
-    themeModal.style.borderRadius = "20px";
-    themeModal.style.padding = "20px";
-    themeModal.style.zIndex = "9999";
-    themeModal.style.width = "300px";
-    themeModal.style.color = "var(--text)";
-    themeModal.style.boxShadow = "0 0 20px rgba(0,0,0,0.3)";
-    themeModal.innerHTML = `
+    // =========================
+    // Theme System
+    // =========================
+    const themes = {
+        light: {
+            bg: "#f4f4f4",
+            userBubble: "#d1e7ff",
+            aiBubble: "#e8e8e8",
+            accent: "#007bff",
+            text: "#222"
+        },
+        dark: {
+            bg: "#1e1e1e",
+            userBubble: "#4a90e2",
+            aiBubble: "#2c2c2c",
+            accent: "#007bff",
+            text: "#fff"
+        },
+        red: {
+            bg: "#2b0000",
+            userBubble: "#ff4d4d",
+            aiBubble: "#661111",
+            accent: "#ff0000",
+            text: "#fff"
+        },
+        green: {
+            bg: "#002b00",
+            userBubble: "#00cc44",
+            aiBubble: "#004d00",
+            accent: "#00ff66",
+            text: "#fff"
+        },
+        blue: {
+            bg: "#001f3f",
+            userBubble: "#3399ff",
+            aiBubble: "#003366",
+            accent: "#3399ff",
+            text: "#fff"
+        }
+    };
+
+    function applyTheme(theme) {
+        document.documentElement.style.setProperty("--bg", theme.bg);
+        document.documentElement.style.setProperty("--userBubble", theme.userBubble);
+        document.documentElement.style.setProperty("--aiBubble", theme.aiBubble);
+        document.documentElement.style.setProperty("--accent", theme.accent);
+        document.documentElement.style.setProperty("--text", theme.text);
+        typingIndicator.style.background = "var(--aiBubble)";
+        typingIndicator.style.color = "var(--text)";
+    }
+
+    function loadTheme(name) {
+        const stored = localStorage.getItem(`theme_${name}`);
+        if (stored) {
+            const theme = JSON.parse(stored);
+            applyTheme(theme);
+        } else if (themes[name]) {
+            applyTheme(themes[name]);
+        }
+    }
+
+    themeButton.addEventListener("click", () => {
+        const keys = Object.keys(themes);
+        let current = localStorage.getItem("currentTheme") || "light";
+        let next = keys[(keys.indexOf(current) + 1) % keys.length];
+        localStorage.setItem("currentTheme", next);
+        loadTheme(next);
+    });
+
+    loadTheme(localStorage.getItem("currentTheme") || "light");
+
+    // =========================
+    // Custom Theme Modal
+    // =========================
+    const modal = document.createElement("div");
+    modal.id = "themeModal";
+    modal.style.display = "none";
+    modal.style.position = "fixed";
+    modal.style.top = "50%";
+    modal.style.left = "50%";
+    modal.style.transform = "translate(-50%, -50%)";
+    modal.style.background = "var(--bg)";
+    modal.style.border = "2px solid var(--accent)";
+    modal.style.borderRadius = "20px";
+    modal.style.padding = "20px";
+    modal.style.zIndex = "9999";
+    modal.style.width = "300px";
+    modal.style.color = "var(--text)";
+    modal.style.boxShadow = "0 0 20px rgba(0,0,0,0.3)";
+    modal.innerHTML = `
         <h2 style="text-align:center;">🎨 Custom Theme</h2>
         <label>Name:</label>
         <input id="themeName" type="text" style="width:100%;margin-bottom:8px;"><br>
@@ -165,24 +239,25 @@ document.addEventListener("DOMContentLoaded", () => {
         <button id="saveTheme" style="width:100%;margin-top:5px;">Save</button>
         <button id="closeThemeModal" style="width:100%;margin-top:5px;">Close</button>
     `;
-    document.body.appendChild(themeModal);
+    document.body.appendChild(modal);
 
-    // --- Event Listeners for Theme Modal ---
-    modsButton.onclick = () => {
-        themeModal.style.display = "block";
-    };
+    modsButton.addEventListener("click", () => {
+        modal.style.display = "block";
+    });
 
     document.getElementById("closeThemeModal").onclick = () => {
-        themeModal.style.display = "none";
+        modal.style.display = "none";
     };
 
     document.getElementById("previewTheme").onclick = () => {
-        const bg = document.getElementById("bgColor").value;
-        const userBubble = document.getElementById("userBubbleColor").value;
-        const aiBubble = document.getElementById("aiBubbleColor").value;
-        const accent = document.getElementById("accentColor").value;
-        const text = document.getElementById("textColor").value;
-        applyTheme({ bg, userBubble, aiBubble, accent, text });
+        const theme = {
+            bg: document.getElementById("bgColor").value,
+            userBubble: document.getElementById("userBubbleColor").value,
+            aiBubble: document.getElementById("aiBubbleColor").value,
+            accent: document.getElementById("accentColor").value,
+            text: document.getElementById("textColor").value
+        };
+        applyTheme(theme);
     };
 
     document.getElementById("saveTheme").onclick = () => {
@@ -196,18 +271,15 @@ document.addEventListener("DOMContentLoaded", () => {
             text: document.getElementById("textColor").value
         };
         localStorage.setItem(`theme_${name}`, JSON.stringify(theme));
+        localStorage.setItem("currentTheme", name);
+        applyTheme(theme);
         alert(`Theme "${name}" saved!`);
+        modal.style.display = "none";
     };
 
-    function applyTheme(theme) {
-        document.documentElement.style.setProperty("--bg", theme.bg);
-        document.documentElement.style.setProperty("--userBubble", theme.userBubble);
-        document.documentElement.style.setProperty("--aiBubble", theme.aiBubble);
-        document.documentElement.style.setProperty("--accent", theme.accent);
-        document.documentElement.style.setProperty("--text", theme.text);
-    }
-
-    // --- Add message (syncs with theme) ---
+    // =========================
+    // Chat Functionality
+    // =========================
     function addMessage(sender, text) {
         const bubble = document.createElement("div");
         bubble.className = `message ${sender}`;
@@ -219,12 +291,11 @@ document.addEventListener("DOMContentLoaded", () => {
         bubble.style.padding = "10px 14px";
         bubble.style.borderRadius = "18px";
         bubble.style.maxWidth = "75%";
-        bubble.style.animation = "fadeIn 0.4s ease";
+        bubble.style.animation = "fadeIn 0.3s ease";
         chatBox.insertBefore(bubble, typingIndicator);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // --- Typing Animation ---
     function showTyping() {
         typingIndicator.style.background = "var(--aiBubble)";
         typingIndicator.style.color = "var(--text)";
@@ -235,7 +306,6 @@ document.addEventListener("DOMContentLoaded", () => {
         typingIndicator.style.display = "none";
     }
 
-    // --- Handle sending messages ---
     async function sendMessage() {
         const text = inputBox.value.trim();
         if (!text) return;
