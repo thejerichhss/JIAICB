@@ -260,10 +260,48 @@ customThemeList.addEventListener('click', e => {
 });
 
 // Export chat history
-const exportChatBtn=document.createElement('button'); exportChatBtn.textContent='Export Chat'; exportChatBtn.style.marginLeft='0.5em';
-exportChatBtn.onclick = ()=>{ const blob=new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='chat_history.json'; a.click(); URL.revokeObjectURL(url); };
+const exportChatBtn = document.createElement('button');
+exportChatBtn.textContent = 'Export Chat';
+exportChatBtn.style.marginLeft = '0.5em';
+exportChatBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chat_history.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
 document.getElementById('inputArea').append(exportChatBtn);
 
+// Import chat history
+const importChatBtn = document.createElement('button');
+importChatBtn.textContent = 'Import Chat';
+importChatBtn.style.marginLeft = '0.5em';
+const importChatFile = document.createElement('input');
+importChatFile.type = 'file';
+importChatFile.accept = '.json';
+importChatFile.style.display = 'none';
+
+importChatBtn.onclick = () => importChatFile.click();
+
+importChatFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const importedChat = JSON.parse(text);
+    if (!Array.isArray(importedChat)) throw new Error('Invalid chat format');
+    chatHistory = importedChat;
+    const chatContainer = document.getElementById('chat');
+    chatContainer.innerHTML = '';
+    importedChat.forEach(msg => addMessage(msg.sender, msg.text, msg.cls));
+  } catch {
+    alert('Invalid chat file!');
+  }
+});
+
+document.getElementById('inputArea').append(importChatBtn, importChatFile);
 </script>
 </body>
 </html>
