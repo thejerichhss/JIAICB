@@ -121,8 +121,9 @@
 <button id="closeHistory">Close History</button>
 <script>
 let currentTheme = 'dark';
+let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 
-const themes = {
+const baseThemes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
   light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
   sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
@@ -135,9 +136,10 @@ const themes = {
   purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
   pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
 };
+const themes = {...baseThemes, ...customThemes};
 
 function applyTheme(name) {
-  const theme = themes[name] || themes.dark;
+  const theme = themes[name] || baseThemes.dark;
   currentTheme = name;
 
   document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
@@ -151,7 +153,10 @@ function applyTheme(name) {
 
   document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
   document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
+  document.querySelectorAll('.system').forEach(el => {
+    el.style.color = theme.systemText;
+    el.style.textAlign = 'left';
+  });
 
   const typing = document.getElementById('typing');
   if (typing) typing.style.background = theme.aiBubble;
@@ -208,7 +213,6 @@ async function sendMessage() {
   const text = prompt.value.trim();
   if (!text) return;
 
-  // Remove "memory cleared" message if present
   document.querySelectorAll('.system').forEach(el => el.remove());
 
   addMessage('You', text, 'user');
@@ -240,18 +244,15 @@ document.getElementById('clearMemory').addEventListener('click', async () => {
 const historyBtn = document.getElementById('historyBtn');
 const historyFrame = document.getElementById('historyFrame');
 const closeHistory = document.getElementById('closeHistory');
-
 historyBtn.onclick = async () => {
   historyFrame.src = "/api?view=history";
   historyFrame.style.display = 'block';
   closeHistory.style.display = 'block';
 };
-
 closeHistory.onclick = () => {
   historyFrame.style.display = 'none';
   closeHistory.style.display = 'none';
 };
-
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     historyFrame.style.display = 'none';
@@ -267,7 +268,6 @@ document.getElementById('searchBar').addEventListener('input', e => {
   });
 });
 
-// Theme dropdown (works again)
 document.getElementById('themeSelector').addEventListener('change', e => {
   const val = e.target.value;
   localStorage.setItem('theme', val);
@@ -291,6 +291,47 @@ style.textContent = `
 }
 `;
 document.head.appendChild(style);
+
+// --- Mods Button ---
+const modsBtn = document.createElement('button');
+modsBtn.textContent = 'Mods';
+modsBtn.style.marginLeft = '0.5em';
+modsBtn.style.padding = '0.5em 1em';
+modsBtn.style.borderRadius = '5px';
+modsBtn.style.border = 'none';
+modsBtn.style.background = '#444';
+modsBtn.style.color = '#fff';
+modsBtn.style.cursor = 'pointer';
+document.getElementById('searchBar').insertAdjacentElement('afterend', modsBtn);
+
+const fileInput = document.createElement('input');
+fileInput.type = 'file';
+fileInput.accept = '.json';
+fileInput.style.display = 'none';
+document.body.appendChild(fileInput);
+
+modsBtn.onclick = () => fileInput.click();
+
+fileInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const themeData = JSON.parse(text);
+    if (!themeData.name) throw new Error("Missing 'name' field.");
+    customThemes[themeData.name] = themeData;
+    localStorage.setItem('customThemes', JSON.stringify(customThemes));
+    const opt = document.createElement('option');
+    opt.value = themeData.name;
+    opt.textContent = themeData.name + ' (Custom)';
+    document.getElementById('themeSelector').appendChild(opt);
+    applyTheme(themeData.name);
+    document.getElementById('themeSelector').value = themeData.name;
+    alert('Custom theme added!');
+  } catch {
+    alert('Invalid theme file!');
+  }
+});
 </script>
 </body>
 </html>
