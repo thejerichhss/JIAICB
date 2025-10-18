@@ -301,29 +301,33 @@ modsBtn.addEventListener("click", () => {
   }
 });
 
-
 // --- IMPORT CHAT ---
-const importFile = document.getElementById('importChatFile');
-document.getElementById('importChatBtn').onclick = () => importFile.click();
+const importChatBtn = document.getElementById('importChatBtn');
+const importChatFile = document.getElementById('importChatFile');
 
-importFile.addEventListener('change', async e => {
+importChatBtn.addEventListener('click', () => importChatFile.click());
+
+importChatFile.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-  const text = await file.text();
+
   try {
+    const text = await file.text();
     const importedChat = JSON.parse(text);
 
-    // Reset chat + memory
+    // Clear current chat + memory
     document.getElementById('chat').innerHTML = '';
     chatHistory = [];
 
-    // Add messages and save to localStorage
+    // Add imported messages & save to memory
     importedChat.forEach(msg => {
       addMessage(msg.sender, msg.text, msg.cls, { save: true });
     });
+
+    // Persist in localStorage
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
 
-    // Optionally tell backend (if you have /api)
+    // Optional backend sync (skip if not needed)
     try {
       await fetch('/api', {
         method: 'POST',
@@ -331,16 +335,19 @@ importFile.addEventListener('change', async e => {
         body: JSON.stringify({ memory: chatHistory })
       });
     } catch (err) {
-      console.warn('API sync skipped (offline mode).');
+      console.warn('Backend sync skipped');
     }
 
     addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-  } catch (err) {
-    console.error(err);
-    alert('Invalid chat file!');
-  }
-});
 
+  } catch (err) {
+    console.error('Import failed:', err);
+    alert('Invalid or unreadable chat file!');
+  }
+
+  // Reset file input so it can be used again
+  e.target.value = '';
+});
 </script>
 </body>
 </html>
