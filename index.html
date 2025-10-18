@@ -106,22 +106,24 @@ let currentTheme = 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 
 const baseThemes = {
-  dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
-  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
-  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
-  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
-  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
-  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
-  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
-  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
-  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
-  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
+  dark:{background:'#111', chatBackground:'#222', userBubble:'#6272a4', aiBubble:'#50fa7b', systemText:'#ff5555', inputBackground:'#222', inputText:'#fff'},
+  light:{background:'#f4f4f4', chatBackground:'#fff', userBubble:'#007bff', aiBubble:'#28a745', systemText:'#dc3545', inputBackground:'#fff', inputText:'#000'},
+  sunset:{background:'#ffecd1', chatBackground:'#ffe4c4', userBubble:'#ff7f50', aiBubble:'#ffa07a', systemText:'#ff4500', inputBackground:'#fff5e6', inputText:'#333'},
+  red:{background:'#2b0000', chatBackground:'#3d0c0c', userBubble:'#ff4d4d', aiBubble:'#ff9999', systemText:'#ffb3b3', inputBackground:'#4d0f0f', inputText:'#fff'},
+  orange:{background:'#2b1500', chatBackground:'#3d1f00', userBubble:'#ff7b00', aiBubble:'#ffb366', systemText:'#ffcc99', inputBackground:'#4d2600', inputText:'#fff'},
+  yellow:{background:'#2b2b00', chatBackground:'#3d3d00', userBubble:'#ffee00', aiBubble:'#fff57f', systemText:'#fff8b3', inputBackground:'#4d4d00', inputText:'#000'},
+  green:{background:'#001f00', chatBackground:'#0c3d0c', userBubble:'#00b33c', aiBubble:'#66ff99', systemText:'#aaffcc', inputBackground:'#004d1a', inputText:'#fff'},
+  teal:{background:'#001f1f', chatBackground:'#0c3d3d', userBubble:'#00b3b3', aiBubble:'#66ffff', systemText:'#99ffff', inputBackground:'#004d4d', inputText:'#fff'},
+  blue:{background:'#000f33', chatBackground:'#001a4d', userBubble:'#3385ff', aiBubble:'#80b3ff', systemText:'#99ccff', inputBackground:'#002b80', inputText:'#fff'},
+  purple:{background:'#1a0033', chatBackground:'#26004d', userBubble:'#9933ff', aiBubble:'#cc99ff', systemText:'#e6ccff', inputBackground:'#330066', inputText:'#fff'},
+  pink:{background:'#33001a', chatBackground:'#4d0026', userBubble:'#ff66b3', aiBubble:'#ffb3d9', systemText:'#ffccff', inputBackground:'#660033', inputText:'#fff'}
 };
+
 const themes = {...baseThemes, ...customThemes};
 
-function applyTheme(name) {
-  const theme = themes[name] || baseThemes.dark;
+// --- THEME FUNCTION ---
+function applyTheme(name, overrideTheme) {
+  const theme = overrideTheme || themes[name] || baseThemes.dark;
   currentTheme = name;
 
   document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
@@ -144,6 +146,7 @@ function applyTheme(name) {
   if (typing) typing.style.background = theme.aiBubble;
 }
 
+// --- MESSAGE ANIMATIONS ---
 function animateMessage(el) {
   el.style.opacity = '0';
   el.style.transform = 'translateY(10px)';
@@ -154,6 +157,7 @@ function animateMessage(el) {
   });
 }
 
+// --- ADD MESSAGE ---
 function addMessage(sender, text, cls) {
   const chat = document.getElementById('chat');
   const msg = document.createElement('div');
@@ -173,6 +177,7 @@ function addMessage(sender, text, cls) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+// --- TYPING INDICATOR ---
 function showTyping() {
   if (!document.getElementById('typing')) {
     const t = document.createElement('div');
@@ -190,6 +195,7 @@ function hideTyping() {
   if (t) t.remove();
 }
 
+// --- SEND MESSAGE ---
 async function sendMessage() {
   const prompt = document.getElementById('prompt');
   const text = prompt.value.trim();
@@ -216,12 +222,14 @@ document.getElementById('prompt').addEventListener('keydown', e => {
   if (e.key === 'Enter') sendMessage();
 });
 
+// --- CLEAR MEMORY ---
 document.getElementById('clearMemory').addEventListener('click', async () => {
   await fetch(`/api?clear=true`);
   document.getElementById('chat').innerHTML = '';
   addMessage('System', 'Memory cleared!', 'system');
 });
 
+// --- HISTORY ---
 const historyBtn = document.getElementById('historyBtn');
 const historyFrame = document.getElementById('historyFrame');
 const closeHistory = document.getElementById('closeHistory');
@@ -241,6 +249,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// --- SEARCH ---
 document.getElementById('searchBar').addEventListener('input', e => {
   const term = e.target.value.toLowerCase();
   document.querySelectorAll('#chat .message').forEach(m => {
@@ -249,12 +258,14 @@ document.getElementById('searchBar').addEventListener('input', e => {
   });
 });
 
+// --- THEME SELECTOR ---
 document.getElementById('themeSelector').addEventListener('change', e => {
   const val = e.target.value;
   localStorage.setItem('theme', val);
   applyTheme(val);
 });
 
+// --- LOAD SAVED THEME ---
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme && themes[savedTheme]) {
   applyTheme(savedTheme);
@@ -263,6 +274,7 @@ if (savedTheme && themes[savedTheme]) {
   applyTheme('dark');
 }
 
+// --- STYLE ---
 const style = document.createElement('style');
 style.textContent = `
 @keyframes pulse {
@@ -283,8 +295,8 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-// ---- Custom Themes Menu ----
-const modsBtn = document.getElementById('modsBtn');
+// --- CUSTOM THEMES MENU ---
+const modsbtn = document.getElementById('modsbtn');
 const menu = document.createElement('div');
 menu.id = 'customThemesMenu';
 menu.innerHTML = `
@@ -310,13 +322,11 @@ function refreshCustomThemesList() {
   }
 }
 
-modsBtn.onclick = () => {
+modsbtn.onclick = () => {
   refreshCustomThemesList();
   menu.style.display = 'block';
 };
-document.getElementById('closeMods').onclick = () => {
-  menu.style.display = 'none';
-};
+document.getElementById('closeMods').onclick = () => menu.style.display = 'none';
 
 document.getElementById('themeUpload').addEventListener('change', async e => {
   const file = e.target.files[0];
@@ -353,8 +363,7 @@ menu.addEventListener('click', e => {
   }
 });
 
-// === MODS BUTTON + CUSTOM THEME MENU ===
-const modsbtn = document.getElementById("modsbtn");
+// --- CUSTOM THEME CREATOR MODAL ---
 const modal = document.getElementById("customThemeModal");
 const closeTheme = document.getElementById("closeTheme");
 const previewTheme = document.getElementById("previewTheme");
@@ -384,13 +393,21 @@ saveTheme.onclick = () => {
     aiBubble: document.getElementById("aiColor").value,
     systemText: document.getElementById("systemColor").value,
     inputBackground: "#222",
-    inputText: "#fff"
+    inputText: "#fff",
+    name: "My Custom Theme " + Date.now()
   };
-  localStorage.setItem("customTheme", JSON.stringify(theme));
+  customThemes[theme.name] = theme;
+  localStorage.setItem('customThemes', JSON.stringify(customThemes));
+  const opt = document.createElement('option');
+  opt.value = theme.name;
+  opt.textContent = theme.name + ' (Custom)';
+  document.getElementById('themeSelector').appendChild(opt);
   applyTheme("custom", theme);
   modal.style.display = "none";
+  refreshCustomThemesList();
 };
 
+// --- LOAD SAVED CUSTOM THEME ---
 const savedCustom = localStorage.getItem("customTheme");
 if (savedCustom) applyTheme("custom", JSON.parse(savedCustom));
 </script>
