@@ -125,7 +125,16 @@ const baseThemes = {
 const themes = {...baseThemes, ...customThemes};
 
 function applyTheme(name, overrideTheme) {
-  const theme = overrideTheme || themes[name] || baseThemes.dark;
+  let theme;
+
+  if (overrideTheme) {
+    theme = overrideTheme;
+  } else if (customThemes[name]) {
+    theme = customThemes[name];
+  } else {
+    theme = baseThemes[name] || baseThemes.dark;
+  }
+
   currentTheme = name;
 
   document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
@@ -147,7 +156,7 @@ function applyTheme(name, overrideTheme) {
   const typing = document.getElementById('typing');
   if (typing) typing.style.background = theme.aiBubble;
 }
-  
+
 function animateMessage(el) {
   el.style.opacity = '0';
   el.style.transform = 'translateY(10px)';
@@ -431,7 +440,8 @@ importFile.addEventListener('change', async e => {
 const exportBtn = document.getElementById('exportThemeBtn');
 
 exportBtn.onclick = () => {
-  const theme = {
+  // Get currently applied theme colors
+  let theme = customThemes[currentTheme] || {
     background: document.getElementById("bgColor").value,
     chatBackground: document.getElementById("chatBgColor").value,
     userBubble: document.getElementById("userColor").value,
@@ -439,8 +449,17 @@ exportBtn.onclick = () => {
     systemText: document.getElementById("systemColor").value,
     inputBackground: "#222",
     inputText: "#fff",
-    name: "CustomTheme_" + Date.now()
   };
+
+  // Ensure it has a name
+  if (!theme.name) theme.name = "CustomTheme_" + Date.now();
+
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
+  const dlAnchor = document.createElement('a');
+  dlAnchor.setAttribute("href", dataStr);
+  dlAnchor.setAttribute("download", theme.name + ".json");
+  dlAnchor.click();
+};
 
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(theme, null, 2));
   const dlAnchor = document.createElement('a');
