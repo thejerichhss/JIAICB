@@ -105,17 +105,26 @@ const baseThemes = {
 
 const themes = {...baseThemes, ...customThemes};
 
-// ---- Apply Theme ----
 function applyTheme(name, overrideTheme){
-  const theme = overrideTheme||customThemes[name]||baseThemes[name]||baseThemes.dark;
+  const theme = overrideTheme || customThemes[name] || baseThemes[name] || baseThemes.dark;
   currentTheme = name;
+
+  // Animate body and chat background
+  document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
+  const chatEl = document.getElementById('chat');
+  chatEl.style.transition = 'background 0.4s ease';
+  const promptEl = document.getElementById('prompt');
+  promptEl.style.transition = 'background 0.4s ease, color 0.4s ease';
+
+  // Apply colors
   document.body.style.background = theme.background;
-  document.getElementById('chat').style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
-  document.querySelectorAll('.user').forEach(el=>el.style.background=theme.userBubble);
-  document.querySelectorAll('.ai').forEach(el=>el.style.background=theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el=>el.style.color=theme.systemText);
+  chatEl.style.background = theme.chatBackground;
+  promptEl.style.background = theme.inputBackground;
+  promptEl.style.color = theme.inputText;
+
+  document.querySelectorAll('.user').forEach(el => el.style.transition='background 0.3s ease; background:'+theme.userBubble);
+  document.querySelectorAll('.ai').forEach(el => el.style.transition='background 0.3s ease; background:'+theme.aiBubble);
+  document.querySelectorAll('.system').forEach(el => { el.style.transition='color 0.3s ease'; el.style.color=theme.systemText; });
 }
 
 // ---- Chat UI ----
@@ -173,7 +182,19 @@ importChatFile.addEventListener('change', async e=>{
   try{
     const importedChat=JSON.parse(text);
     document.getElementById('chat').innerHTML='';
-    chatHistory = importedChat;
+  chatHistory = importedChat;  // Replace current display array
+
+  // Update chat display
+  document.getElementById('chat').innerHTML = '';
+  chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls));
+
+  // Push imported chat to AI memory
+  await fetch('/api', {
+   method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({memory: chatHistory}) // <-- now memory contains the imported conversation
+});
+
     importedChat.forEach(msg=>addMessage(msg.sender,msg.text,msg.cls));
     await fetch('/api',{
       method:'POST',
