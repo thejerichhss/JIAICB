@@ -54,24 +54,33 @@
 </style>
 </head>
 <body>
-<button id="modsbtn" style="margin-left:10px;">Custom Themes</button>
+<!-- Custom Theme Modal -->
 <div id="customThemeModal" style="
   display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
   background:#111; color:#fff; border:2px solid #50fa7b; border-radius:15px;
-  padding:1em; z-index:10000; width:320px; box-shadow:0 0 20px #50fa7b;">
+  padding:1em; z-index:10000; width:350px; max-height:80%; overflow-y:auto; box-shadow:0 0 20px #50fa7b;
+">
   <h3 style="text-align:center;">V1.0 Custom Theme Creator</h3>
+
+  <!-- Color pickers -->
   <label>Background:</label><input type="color" id="bgColor" value="#111"><br><br>
   <label>Chat Background:</label><input type="color" id="chatBgColor" value="#222"><br><br>
   <label>User Bubble:</label><input type="color" id="userColor" value="#6272a4"><br><br>
   <label>AI Bubble:</label><input type="color" id="aiColor" value="#50fa7b"><br><br>
   <label>System Text:</label><input type="color" id="systemColor" value="#ff5555"><br><br>
-  <div style="text-align:center;">
+
+  <!-- Saved custom themes list -->
+  <h4>Saved Themes</h4>
+  <ul id="customThemeList" style="list-style:none; padding:0; max-height:150px; overflow-y:auto; border:1px solid #444; border-radius:5px; padding:5px;"></ul>
+
+  <!-- Buttons -->
+  <div style="text-align:center; margin-top:10px;">
     <button id="previewTheme">Preview</button>
     <button id="saveTheme">Save</button>
     <button id="exportThemeBtn" style="background:#00bfff;color:white;margin-top:5px;">Export Theme</button>
     <button id="importThemeBtn" style="background:#50fa7b;color:white;margin-top:5px;">Import Theme</button>
-      <input type="file" id="importThemeFile" accept=".json" style="display:none;">
-    <button id="closeTheme">Close</button>
+    <input type="file" id="importThemeFile" accept=".json" style="display:none;">
+    <button id="closeTheme" style="background:#ff5555;color:white;">Close</button>
   </div>
 </div>
 <input id="searchBar" type="text" placeholder="Search messages..." />
@@ -254,19 +263,106 @@ if (savedTheme && themes[savedTheme]) {
 // --- Mods Menu + Theme Creator ---
 const modsbtn = document.getElementById('modsbtn');
 const modal = document.getElementById("customThemeModal");
+
 function refreshCustomThemesList() {
   const list = document.getElementById('customThemeList');
   list.innerHTML = '';
   for (const [name, data] of Object.entries(customThemes)) {
     const li = document.createElement('li');
+    li.style.display = 'flex';
+    li.style.justifyContent = 'space-between';
+    li.style.alignItems = 'center';
+    li.style.marginBottom = '4px';
     li.innerHTML = `<span>${name}</span>
       <div>
-        <button class="applyBtn" data-name="${name}" style="background:#50fa7b;">Apply</button>
+        <button class="applyBtn" data-name="${name}" style="background:#50fa7b;margin-right:4px;">Apply</button>
         <button class="deleteBtn" data-name="${name}" style="background:#ff5555;">Delete</button>
       </div>`;
     list.appendChild(li);
   }
 }
+
+// Open modal
+modsbtn.onclick = () => {
+  modal.style.display = 'block';
+  refreshCustomThemesList();
+};
+
+// Close modal
+document.getElementById("closeTheme").onclick = () => modal.style.display = "none";
+
+// Preview + Save custom themes
+document.getElementById("previewTheme").onclick = () => {
+  const theme = {
+    background: bgColor.value, chatBackground: chatBgColor.value,
+    userBubble: userColor.value, aiBubble: aiColor.value,
+    systemText: systemColor.value, inputBackground: "#222", inputText: "#fff"
+  };
+  applyTheme("custom", theme);
+};
+
+document.getElementById("saveTheme").onclick = () => {
+  const theme = {
+    background: bgColor.value, chatBackground: chatBgColor.value,
+    userBubble: userColor.value, aiBubble: aiColor.value,
+    systemText: systemColor.value, inputBackground: "#222", inputText: "#fff",
+    name: "Custom_" + Date.now()
+  };
+  customThemes[theme.name] = theme;
+  localStorage.setItem('customThemes', JSON.stringify(customThemes));
+  const opt = document.createElement('option');
+  opt.value = theme.name; opt.textContent = theme.name + ' (Custom)';
+  document.getElementById('themeSelector').appendChild(opt);
+  applyTheme(theme.name, theme);
+  refreshCustomThemesList();
+  modal.style.display = "none";
+};
+
+// Import/export theme JSON
+document.getElementById('importThemeBtn').onclick = () => importThemeFile.click();
+document.getElementById('importThemeFile').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  try {
+    const themeData = JSON.parse(text);
+    customThemes[themeData.name] = themeData;
+    localStorage.setItem('customThemes', JSON.stringify(customThemes));
+    const opt = document.createElement('option');
+    opt.value = themeData.name; opt.textContent = themeData.name + ' (Custom)';
+    document.getElementById('themeSelector').appendChild(opt);
+    refreshCustomThemesList();
+    alert(`Theme "${themeData.name}" imported!`);
+  } catch { alert('Invalid theme file!'); }
+});
+
+document.getElementById('exportThemeBtn').onclick = () => {
+  const theme = {
+    background: bgColor.value, chatBackground: chatBgColor.value,
+    userBubble: userColor.value, aiBubble: aiColor.value,
+    systemText: systemColor.value, inputBackground: "#222", inputText: "#fff",
+    name: "CustomTheme_" + Date.now()
+  };
+  const blob = new Blob([JSON.stringify(theme, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = theme.name + ".json"; a.click();
+  URL.revokeObjectURL(url);
+});
+
+// Handle Apply/Delete inside modal list
+document.getElementById('customThemeList').addEventListener('click', e => {
+  if (e.target.classList.contains('applyBtn')) {
+    const name = e.target.dataset.name;
+    applyTheme(name);
+    document.getElementById('themeSelector').value = name;
+  } else if (e.target.classList.contains('deleteBtn')) {
+    const name = e.target.dataset.name;
+    delete customThemes[name];
+    localStorage.setItem('customThemes', JSON.stringify(customThemes));
+    document.querySelector(`#themeSelector option[value="${name}"]`)?.remove();
+    refreshCustomThemesList();
+  }
+});
 
 // 👇 Fixed Mods button behavior — opens both creator and list
 modsbtn.onclick = () => {
