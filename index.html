@@ -214,7 +214,6 @@ async function sendMessage() {
   if (!text) return;
 
   document.querySelectorAll('.system').forEach(el => el.remove());
-
   addMessage('You', text, 'user');
   prompt.value = '';
   showTyping();
@@ -289,37 +288,86 @@ style.textContent = `
   50% { opacity: 0.6; }
   100% { opacity: 1; }
 }
+#customThemesMenu {
+  display:none; position:fixed; top:50%; left:50%;
+  transform:translate(-50%,-50%); background:#111;
+  color:white; border:2px solid #50fa7b; padding:1em;
+  width:400px; z-index:9999; border-radius:10px;
+}
+#customThemesMenu h3 { margin-top:0; }
+#customThemesMenu ul { list-style:none; padding:0; max-height:200px; overflow:auto; }
+#customThemesMenu li { padding:0.5em; display:flex; justify-content:space-between; align-items:center; background:#222; margin-bottom:0.5em; border-radius:5px; }
+#customThemesMenu button { border:none; border-radius:5px; padding:0.3em 0.7em; cursor:pointer; }
 `;
 document.head.appendChild(style);
 
-// --- Mods Button (id="modsBtn") ---
+// ---- Custom Themes Menu ----
 const modsBtn = document.getElementById('modsBtn');
-const fileInput = document.createElement('input');
-fileInput.type = 'file';
-fileInput.accept = '.json';
-fileInput.style.display = 'none';
-document.body.appendChild(fileInput);
+const menu = document.createElement('div');
+menu.id = 'customThemesMenu';
+menu.innerHTML = `
+  <h3>Custom Themes</h3>
+  <ul id="customThemeList"></ul>
+  <input type="file" id="themeUpload" accept=".json" style="margin-top:.5em;">
+  <br><br>
+  <button id="closeMods" style="background:#ff5555;color:white;">Close</button>
+`;
+document.body.appendChild(menu);
 
-modsBtn.onclick = () => fileInput.click();
+function refreshCustomThemesList() {
+  const list = document.getElementById('customThemeList');
+  list.innerHTML = '';
+  for (const [name, data] of Object.entries(customThemes)) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span>${name}</span>
+      <div>
+        <button class="applyBtn" data-name="${name}" style="background:#50fa7b;">Apply</button>
+        <button class="deleteBtn" data-name="${name}" style="background:#ff5555;">Delete</button>
+      </div>`;
+    list.appendChild(li);
+  }
+}
 
-fileInput.addEventListener('change', async e => {
+modsBtn.onclick = () => {
+  refreshCustomThemesList();
+  menu.style.display = 'block';
+};
+document.getElementById('closeMods').onclick = () => {
+  menu.style.display = 'none';
+};
+
+document.getElementById('themeUpload').addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
   try {
     const themeData = JSON.parse(text);
-    if (!themeData.name) throw new Error("Missing 'name' field.");
+    if (!themeData.name) throw new Error("Missing 'name'");
     customThemes[themeData.name] = themeData;
     localStorage.setItem('customThemes', JSON.stringify(customThemes));
     const opt = document.createElement('option');
     opt.value = themeData.name;
     opt.textContent = themeData.name + ' (Custom)';
     document.getElementById('themeSelector').appendChild(opt);
-    applyTheme(themeData.name);
-    document.getElementById('themeSelector').value = themeData.name;
-    alert('Custom theme added!');
+    refreshCustomThemesList();
+    alert('Theme added!');
   } catch {
     alert('Invalid theme file!');
+  }
+});
+
+menu.addEventListener('click', e => {
+  if (e.target.classList.contains('applyBtn')) {
+    const name = e.target.dataset.name;
+    applyTheme(name);
+    document.getElementById('themeSelector').value = name;
+    menu.style.display = 'none';
+  } else if (e.target.classList.contains('deleteBtn')) {
+    const name = e.target.dataset.name;
+    delete customThemes[name];
+    localStorage.setItem('customThemes', JSON.stringify(customThemes));
+    document.querySelector(`#themeSelector option[value="${name}"]`)?.remove();
+    refreshCustomThemesList();
   }
 });
 </script>
