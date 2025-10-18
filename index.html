@@ -228,6 +228,23 @@ closeHistory.onclick=()=>{
   closeHistory.style.display='none';
 };
 
+// --- EXPORT CHAT ---
+const exportBtn = document.createElement('button');
+exportBtn.textContent = 'Export Chat';
+exportBtn.style.background = '#00bfff';
+exportBtn.style.color = '#fff';
+exportBtn.style.marginLeft = '.5em';
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chat_history.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+document.getElementById('inputArea').appendChild(exportBtn);
+
 /* --- Mods Button --- */
 modsBtn.addEventListener("click", () => {
   const modal = document.createElement("div");
@@ -285,35 +302,45 @@ modsBtn.addEventListener("click", () => {
 });
 
 
-/* --- IMPORT / EXPORT CHAT --- */
-const exportBtn=document.createElement('button');
-exportBtn.textContent='Export Chat';
-exportBtn.onclick=()=>{
-  const blob=new Blob([JSON.stringify(chatHistory,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url; a.download='chat_history.json'; a.click();
-  URL.revokeObjectURL(url);
-};
-document.getElementById('inputArea').appendChild(exportBtn);
+// --- IMPORT CHAT ---
+const importFile = document.getElementById('importChatFile');
+document.getElementById('importChatBtn').onclick = () => importFile.click();
 
-const importChatBtn=document.getElementById('importChatBtn');
-const importChatFile=document.getElementById('importChatFile');
-importChatBtn.onclick=()=>importChatFile.click();
-importChatFile.addEventListener('change', async e=>{
-  const f=e.target.files[0];
-  if(!f)return;
-  const text=await f.text();
-  try{
-    const imported=JSON.parse(text);
-    document.getElementById('chat').innerHTML='';
-    chatHistory=[];
-    imported.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:true}));
-    addMessage('System','Chat imported successfully!','system',{save:false});
-  }catch{
-    alert('Invalid chat file.');
+importFile.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    const importedChat = JSON.parse(text);
+
+    // Reset chat + memory
+    document.getElementById('chat').innerHTML = '';
+    chatHistory = [];
+
+    // Add messages and save to localStorage
+    importedChat.forEach(msg => {
+      addMessage(msg.sender, msg.text, msg.cls, { save: true });
+    });
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+
+    // Optionally tell backend (if you have /api)
+    try {
+      await fetch('/api', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memory: chatHistory })
+      });
+    } catch (err) {
+      console.warn('API sync skipped (offline mode).');
+    }
+
+    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
+  } catch (err) {
+    console.error(err);
+    alert('Invalid chat file!');
   }
 });
+
 </script>
 </body>
 </html>
