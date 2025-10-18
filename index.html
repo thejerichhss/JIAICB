@@ -137,6 +137,16 @@ function applyTheme(name){
 
 /* --- LOAD SAVED THEME --- */
 applyTheme(currentTheme);
+// --- RESTORE CHAT FROM LOCALSTORAGE ---
+const saved = localStorage.getItem('chatHistory');
+if (saved) {
+  try {
+    chatHistory = JSON.parse(saved);
+    chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
+  } catch (err) {
+    console.warn('Could not restore chat history:', err);
+  }
+}
 
 /* --- THEME SELECTOR --- */
 document.getElementById('themeSelector').addEventListener('change', e=>{
@@ -320,9 +330,18 @@ importChatFile.addEventListener('change', async (e) => {
     chatHistory = [];
 
     // Add imported messages & save to memory
-    importedChat.forEach(msg => {
-      addMessage(msg.sender, msg.text, msg.cls, { save: true });
-    });
+    document.getElementById('chat').innerHTML = '';
+chatHistory = [];
+
+importedChat.forEach(msg => {
+  if (msg.sender && msg.text && msg.cls) {
+    addMessage(msg.sender, msg.text, msg.cls, { save: true });
+  }
+});
+
+// Save & show success
+localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+addMessage('System', 'Chat imported successfully!', 'system', { save: false });
 
     // Persist in localStorage
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
