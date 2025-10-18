@@ -121,254 +121,142 @@
 <button id="closeHistory">Close History</button>
 <script>
 let currentTheme = 'dark';
-let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
+document.addEventListener("DOMContentLoaded", () => {
+    const chatBox = document.getElementById("chatBox");
+    const inputBox = document.getElementById("userInput");
+    const modsButton = document.getElementById("modsButton");
+    const typingIndicator = document.createElement("div");
+    typingIndicator.className = "typing-indicator";
+    typingIndicator.textContent = "Typing...";
+    typingIndicator.style.display = "none";
+    chatBox.appendChild(typingIndicator);
 
-const baseThemes = {
-  dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
-  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
-  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
-  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
-  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
-  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
-  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
-  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
-  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
-  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
-};
-const themes = {...baseThemes, ...customThemes};
+    // --- Custom Theme Modal ---
+    const themeModal = document.createElement("div");
+    themeModal.id = "themeModal";
+    themeModal.style.display = "none";
+    themeModal.style.position = "fixed";
+    themeModal.style.top = "50%";
+    themeModal.style.left = "50%";
+    themeModal.style.transform = "translate(-50%, -50%)";
+    themeModal.style.background = "var(--bg)";
+    themeModal.style.border = "2px solid var(--accent)";
+    themeModal.style.borderRadius = "20px";
+    themeModal.style.padding = "20px";
+    themeModal.style.zIndex = "9999";
+    themeModal.style.width = "300px";
+    themeModal.style.color = "var(--text)";
+    themeModal.style.boxShadow = "0 0 20px rgba(0,0,0,0.3)";
+    themeModal.innerHTML = `
+        <h2 style="text-align:center;">🎨 Custom Theme</h2>
+        <label>Name:</label>
+        <input id="themeName" type="text" style="width:100%;margin-bottom:8px;"><br>
+        <label>Background:</label>
+        <input id="bgColor" type="color" style="width:100%;margin-bottom:8px;"><br>
+        <label>User Bubble:</label>
+        <input id="userBubbleColor" type="color" style="width:100%;margin-bottom:8px;"><br>
+        <label>AI Bubble:</label>
+        <input id="aiBubbleColor" type="color" style="width:100%;margin-bottom:8px;"><br>
+        <label>Accent:</label>
+        <input id="accentColor" type="color" style="width:100%;margin-bottom:8px;"><br>
+        <label>Text:</label>
+        <input id="textColor" type="color" style="width:100%;margin-bottom:8px;"><br>
+        <button id="previewTheme" style="width:100%;margin-top:10px;">Preview</button>
+        <button id="saveTheme" style="width:100%;margin-top:5px;">Save</button>
+        <button id="closeThemeModal" style="width:100%;margin-top:5px;">Close</button>
+    `;
+    document.body.appendChild(themeModal);
 
-function applyTheme(name) {
-  const theme = themes[name] || baseThemes.dark;
-  currentTheme = name;
+    // --- Event Listeners for Theme Modal ---
+    modsButton.onclick = () => {
+        themeModal.style.display = "block";
+    };
 
-  document.body.style.transition = 'background 0.4s ease, color 0.4s ease';
-  document.getElementById('chat').style.transition = 'background 0.4s ease';
-  document.getElementById('prompt').style.transition = 'background 0.4s ease, color 0.4s ease';
+    document.getElementById("closeThemeModal").onclick = () => {
+        themeModal.style.display = "none";
+    };
 
-  document.body.style.background = theme.background;
-  document.getElementById('chat').style.background = theme.chatBackground;
-  document.getElementById('prompt').style.background = theme.inputBackground;
-  document.getElementById('prompt').style.color = theme.inputText;
+    document.getElementById("previewTheme").onclick = () => {
+        const bg = document.getElementById("bgColor").value;
+        const userBubble = document.getElementById("userBubbleColor").value;
+        const aiBubble = document.getElementById("aiBubbleColor").value;
+        const accent = document.getElementById("accentColor").value;
+        const text = document.getElementById("textColor").value;
+        applyTheme({ bg, userBubble, aiBubble, accent, text });
+    };
 
-  document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
-  document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el => {
-    el.style.color = theme.systemText;
-    el.style.textAlign = 'left';
-  });
+    document.getElementById("saveTheme").onclick = () => {
+        const name = document.getElementById("themeName").value.trim() || "Custom";
+        const theme = {
+            name,
+            bg: document.getElementById("bgColor").value,
+            userBubble: document.getElementById("userBubbleColor").value,
+            aiBubble: document.getElementById("aiBubbleColor").value,
+            accent: document.getElementById("accentColor").value,
+            text: document.getElementById("textColor").value
+        };
+        localStorage.setItem(`theme_${name}`, JSON.stringify(theme));
+        alert(`Theme "${name}" saved!`);
+    };
 
-  const typing = document.getElementById('typing');
-  if (typing) typing.style.background = theme.aiBubble;
-}
+    function applyTheme(theme) {
+        document.documentElement.style.setProperty("--bg", theme.bg);
+        document.documentElement.style.setProperty("--userBubble", theme.userBubble);
+        document.documentElement.style.setProperty("--aiBubble", theme.aiBubble);
+        document.documentElement.style.setProperty("--accent", theme.accent);
+        document.documentElement.style.setProperty("--text", theme.text);
+    }
 
-function animateMessage(el) {
-  el.style.opacity = '0';
-  el.style.transform = 'translateY(10px)';
-  requestAnimationFrame(() => {
-    el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    el.style.opacity = '1';
-    el.style.transform = 'translateY(0)';
-  });
-}
+    // --- Add message (syncs with theme) ---
+    function addMessage(sender, text) {
+        const bubble = document.createElement("div");
+        bubble.className = `message ${sender}`;
+        bubble.textContent = text;
+        bubble.style.background = sender === "user" ? "var(--userBubble)" : sender === "ai" ? "var(--aiBubble)" : "transparent";
+        bubble.style.color = "var(--text)";
+        bubble.style.alignSelf = sender === "user" ? "flex-end" : "flex-start";
+        bubble.style.margin = "8px";
+        bubble.style.padding = "10px 14px";
+        bubble.style.borderRadius = "18px";
+        bubble.style.maxWidth = "75%";
+        bubble.style.animation = "fadeIn 0.4s ease";
+        chatBox.insertBefore(bubble, typingIndicator);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
 
-function addMessage(sender, text, cls) {
-  const chat = document.getElementById('chat');
-  const msg = document.createElement('div');
-  msg.className = `message ${cls}`;
-  msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
-  chat.appendChild(msg);
-  animateMessage(msg);
+    // --- Typing Animation ---
+    function showTyping() {
+        typingIndicator.style.background = "var(--aiBubble)";
+        typingIndicator.style.color = "var(--text)";
+        typingIndicator.style.display = "block";
+    }
 
-  const theme = themes[currentTheme];
-  if (cls === 'user') msg.style.background = theme.userBubble;
-  if (cls === 'ai') msg.style.background = theme.aiBubble;
-  if (cls === 'system') {
-    msg.style.color = theme.systemText;
-    msg.style.textAlign = 'left';
-  }
+    function hideTyping() {
+        typingIndicator.style.display = "none";
+    }
 
-  chat.scrollTop = chat.scrollHeight;
-}
+    // --- Handle sending messages ---
+    async function sendMessage() {
+        const text = inputBox.value.trim();
+        if (!text) return;
+        addMessage("user", text);
+        inputBox.value = "";
+        showTyping();
 
-function showTyping() {
-  if (!document.getElementById('typing')) {
-    const t = document.createElement('div');
-    t.id = 'typing';
-    t.className = 'message ai';
-    t.textContent = 'AI is typing...';
-    t.style.background = themes[currentTheme].aiBubble;
-    t.style.animation = 'pulse 1s infinite';
-    document.getElementById('chat').appendChild(t);
-  }
-}
+        try {
+            const resp = await fetch(`/api?input=${encodeURIComponent(text)}`);
+            const reply = await resp.text();
+            hideTyping();
+            addMessage("ai", reply);
+        } catch {
+            hideTyping();
+            addMessage("system", "⚠️ Connection error.");
+        }
+    }
 
-function hideTyping() {
-  const t = document.getElementById('typing');
-  if (t) t.remove();
-}
-
-async function sendMessage() {
-  const prompt = document.getElementById('prompt');
-  const text = prompt.value.trim();
-  if (!text) return;
-
-  document.querySelectorAll('.system').forEach(el => el.remove());
-  addMessage('You', text, 'user');
-  prompt.value = '';
-  showTyping();
-
-  try {
-    const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
-    const reply = await res.text();
-    hideTyping();
-    addMessage('AI', reply, 'ai');
-  } catch {
-    hideTyping();
-    addMessage('System', 'Error connecting to API', 'system');
-  }
-}
-
-document.getElementById('sendBtn').onclick = sendMessage;
-document.getElementById('prompt').addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendMessage();
-});
-
-document.getElementById('clearMemory').addEventListener('click', async () => {
-  await fetch(`/api?clear=true`);
-  document.getElementById('chat').innerHTML = '';
-  addMessage('System', 'Memory cleared!', 'system');
-});
-
-const historyBtn = document.getElementById('historyBtn');
-const historyFrame = document.getElementById('historyFrame');
-const closeHistory = document.getElementById('closeHistory');
-historyBtn.onclick = async () => {
-  historyFrame.src = "/api?view=history";
-  historyFrame.style.display = 'block';
-  closeHistory.style.display = 'block';
-};
-closeHistory.onclick = () => {
-  historyFrame.style.display = 'none';
-  closeHistory.style.display = 'none';
-};
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    historyFrame.style.display = 'none';
-    closeHistory.style.display = 'none';
-  }
-});
-
-document.getElementById('searchBar').addEventListener('input', e => {
-  const term = e.target.value.toLowerCase();
-  document.querySelectorAll('#chat .message').forEach(m => {
-    const text = m.textContent.toLowerCase();
-    m.style.display = term && !text.includes(term) ? 'none' : 'block';
-  });
-});
-
-document.getElementById('themeSelector').addEventListener('change', e => {
-  const val = e.target.value;
-  localStorage.setItem('theme', val);
-  applyTheme(val);
-});
-
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme && themes[savedTheme]) {
-  applyTheme(savedTheme);
-  document.getElementById('themeSelector').value = savedTheme;
-} else {
-  applyTheme('dark');
-}
-
-const style = document.createElement('style');
-style.textContent = `
-@keyframes pulse {
-  0% { opacity: 1; }
-  50% { opacity: 0.6; }
-  100% { opacity: 1; }
-}
-#customThemesMenu {
-  display:none; position:fixed; top:50%; left:50%;
-  transform:translate(-50%,-50%); background:#111;
-  color:white; border:2px solid #50fa7b; padding:1em;
-  width:400px; z-index:9999; border-radius:10px;
-}
-#customThemesMenu h3 { margin-top:0; }
-#customThemesMenu ul { list-style:none; padding:0; max-height:200px; overflow:auto; }
-#customThemesMenu li { padding:0.5em; display:flex; justify-content:space-between; align-items:center; background:#222; margin-bottom:0.5em; border-radius:5px; }
-#customThemesMenu button { border:none; border-radius:5px; padding:0.3em 0.7em; cursor:pointer; }
-`;
-document.head.appendChild(style);
-
-// ---- Custom Themes Menu ----
-const modsBtn = document.getElementById('modsBtn');
-const menu = document.createElement('div');
-menu.id = 'customThemesMenu';
-menu.innerHTML = `
-  <h3>Custom Themes</h3>
-  <ul id="customThemeList"></ul>
-  <input type="file" id="themeUpload" accept=".json" style="margin-top:.5em;">
-  <br><br>
-  <button id="closeMods" style="background:#ff5555;color:white;">Close</button>
-`;
-document.body.appendChild(menu);
-
-function refreshCustomThemesList() {
-  const list = document.getElementById('customThemeList');
-  list.innerHTML = '';
-  for (const [name, data] of Object.entries(customThemes)) {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${name}</span>
-      <div>
-        <button class="applyBtn" data-name="${name}" style="background:#50fa7b;">Apply</button>
-        <button class="deleteBtn" data-name="${name}" style="background:#ff5555;">Delete</button>
-      </div>`;
-    list.appendChild(li);
-  }
-}
-
-modsBtn.onclick = () => {
-  refreshCustomThemesList();
-  menu.style.display = 'block';
-};
-document.getElementById('closeMods').onclick = () => {
-  menu.style.display = 'none';
-};
-
-document.getElementById('themeUpload').addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  try {
-    const themeData = JSON.parse(text);
-    if (!themeData.name) throw new Error("Missing 'name'");
-    customThemes[themeData.name] = themeData;
-    localStorage.setItem('customThemes', JSON.stringify(customThemes));
-    const opt = document.createElement('option');
-    opt.value = themeData.name;
-    opt.textContent = themeData.name + ' (Custom)';
-    document.getElementById('themeSelector').appendChild(opt);
-    refreshCustomThemesList();
-    alert('Theme added!');
-  } catch {
-    alert('Invalid theme file!');
-  }
-});
-
-menu.addEventListener('click', e => {
-  if (e.target.classList.contains('applyBtn')) {
-    const name = e.target.dataset.name;
-    applyTheme(name);
-    document.getElementById('themeSelector').value = name;
-    menu.style.display = 'none';
-  } else if (e.target.classList.contains('deleteBtn')) {
-    const name = e.target.dataset.name;
-    delete customThemes[name];
-    localStorage.setItem('customThemes', JSON.stringify(customThemes));
-    document.querySelector(`#themeSelector option[value="${name}"]`)?.remove();
-    refreshCustomThemesList();
-  }
+    inputBox.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendMessage();
+    });
 });
 </script>
 </body>
