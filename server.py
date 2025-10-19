@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__, static_folder='.')
 
-API_KEY = os.environ.get("GEMINI_API_KEY")  # set this in Render environment
+API_KEY = os.environ.get("JTAICB_API_KEY")  # set this in Render environment
 
 # Serve index.html at root
 @app.route('/')
