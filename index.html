@@ -116,6 +116,13 @@
 
 <script>
 /* ---------- State & Elements ---------- */
+// Generate or load a unique device ID (acts like private IP memory)
+if (!localStorage.getItem("deviceId")) {
+  localStorage.setItem("deviceId", crypto.randomUUID());
+}
+const deviceId = localStorage.getItem("deviceId");
+console.log("Device ID:", deviceId);
+
 const chat = document.getElementById('chat');
 const promptEl = document.getElementById('prompt');
 const sendBtn = document.getElementById('sendBtn');
@@ -268,7 +275,7 @@ async function sendMessage(){
   if(promptEl) promptEl.value = '';
   showTyping();
   try{
-    const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
+    const res = await fetch(`/api?input=${encodeURIComponent(text)}&device=${deviceId}`);
     const reply = await res.text();
     hideTyping();
     addMessage('AI', reply, 'ai');
@@ -294,7 +301,7 @@ if(promptEl) promptEl.addEventListener('keydown', e => { if(e.key==='Enter') sen
 
 if(clearMemoryBtn) clearMemoryBtn.addEventListener('click', async ()=>{
   if(!confirm('Clear local chat memory and server memory?')) return;
-  try{ await fetch('/api?clear=true'); }catch(e){}
+  try{ await fetch(`/api?clear=true&device=${deviceId}`); }catch(e){}
   chat.innerHTML = '';
   chatHistory = [];
   localStorage.removeItem('chatHistory');
