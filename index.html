@@ -87,15 +87,13 @@
 <button id="closeHistory">Close History</button>
 <script>
 let currentTheme = localStorage.getItem('theme') || 'dark';
-let chatHistory = [];
+let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || "[]");
 
-/* --- THEME DEFINITIONS --- */
-const baseThemes = {
+/* --- THEMES --- */
+const themes = {
   dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
   light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
-};
-const colorThemes = {
+  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'},
   red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
   orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
   yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
@@ -105,53 +103,22 @@ const colorThemes = {
   purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
   pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
 };
-const themes = { ...baseThemes, ...colorThemes };
 
-/* --- APPLY THEME FUNCTION --- */
+/* --- APPLY THEME --- */
 function applyTheme(name){
   const t = themes[name] || themes.dark;
   currentTheme = name;
   localStorage.setItem('theme', name);
-
   document.body.style.background = t.background;
   document.body.style.color = t.inputText;
-
-  const chat = document.getElementById('chat');
-  if(chat) chat.style.background = t.chatBackground;
-
-  const prompt = document.getElementById('prompt');
-  if(prompt){
-    prompt.style.background = t.inputBackground;
-    prompt.style.color = t.inputText;
-  }
-
-  // Update all existing bubbles
-  document.querySelectorAll('.user').forEach(el => el.style.background = t.userBubble);
-  document.querySelectorAll('.ai').forEach(el => el.style.background = t.aiBubble);
-  document.querySelectorAll('.system').forEach(el => el.style.color = t.systemText);
-
-  // Typing indicator
-  const typing = document.getElementById('typing');
-  if(typing) typing.style.background = t.aiBubble;
+  document.getElementById('chat').style.background = t.chatBackground;
+  document.getElementById('prompt').style.background = t.inputBackground;
+  document.getElementById('prompt').style.color = t.inputText;
+  document.querySelectorAll('.user').forEach(el=>el.style.background=t.userBubble);
+  document.querySelectorAll('.ai').forEach(el=>el.style.background=t.aiBubble);
+  document.querySelectorAll('.system').forEach(el=>el.style.color=t.systemText);
 }
-
-/* --- LOAD SAVED THEME --- */
 applyTheme(currentTheme);
-// --- RESTORE CHAT FROM LOCALSTORAGE ---
-const saved = localStorage.getItem('chatHistory');
-if (saved) {
-  try {
-    chatHistory = JSON.parse(saved);
-    chatHistory.forEach(msg => addMessage(msg.sender, msg.text, msg.cls, { save: false }));
-  } catch (err) {
-    console.warn('Could not restore chat history:', err);
-  }
-}
-
-/* --- THEME SELECTOR --- */
-document.getElementById('themeSelector').addEventListener('change', e=>{
-  applyTheme(e.target.value);
-});
 
 /* --- ADD MESSAGE --- */
 function addMessage(sender, text, cls, options={save:true}){
@@ -159,40 +126,21 @@ function addMessage(sender, text, cls, options={save:true}){
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
-
   const t = themes[currentTheme];
   if(cls==='user') msg.style.background = t.userBubble;
   if(cls==='ai') msg.style.background = t.aiBubble;
   if(cls==='system') msg.style.color = t.systemText;
-
-  msg.style.opacity = '0';
-  msg.style.transform = 'translateY(10px)';
   chat.appendChild(msg);
-  requestAnimationFrame(()=>{
-    msg.style.transition = 'opacity .3s, transform .3s';
-    msg.style.opacity = '1';
-    msg.style.transform = 'translateY(0)';
-  });
+  requestAnimationFrame(()=>{msg.style.opacity='1';msg.style.transform='translateY(0)';});
   chat.scrollTop = chat.scrollHeight;
-
   if(options.save){
     chatHistory.push({sender,text,cls});
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
   }
 }
 
-/* --- TYPING INDICATOR --- */
-function showTyping(){
-  if(!document.getElementById('typing')){
-    const t = document.createElement('div');
-    t.id = 'typing';
-    t.className = 'message ai';
-    t.textContent = 'AI is typing...';
-    t.style.background = themes[currentTheme].aiBubble;
-    document.getElementById('chat').appendChild(t);
-  }
-}
-function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+/* --- RENDER SAVED CHAT --- */
+chatHistory.forEach(msg => addMessage(msg.sender,msg.text,msg.cls,{save:false}));
 
 /* --- SEND MESSAGE --- */
 async function sendMessage(){
@@ -201,35 +149,71 @@ async function sendMessage(){
   if(!text)return;
   addMessage('You',text,'user');
   prompt.value='';
-  showTyping();
-  try{
-    const res=await fetch(`/api?input=${encodeURIComponent(text)}`);
-    const reply=await res.text();
-    hideTyping();
-    addMessage('AI',reply,'ai');
-  }catch{
-    hideTyping();
-    addMessage('System','Error contacting API.','system');
-  }
+  addMessage('AI','(Simulated AI response placeholder)','ai');
 }
 document.getElementById('sendBtn').onclick=sendMessage;
 document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
 
 /* --- CLEAR MEMORY --- */
-document.getElementById('clearMemory').addEventListener('click', async()=>{
-  await fetch('/api?clear=true');
+document.getElementById('clearMemory').addEventListener('click',()=>{
   document.getElementById('chat').innerHTML='';
   chatHistory=[];
   localStorage.removeItem('chatHistory');
   addMessage('System','Memory cleared!','system',{save:false});
 });
 
-/* --- HISTORY (iframe view of /api?view=history) --- */
+/* --- THEME SELECTOR --- */
+document.getElementById('themeSelector').addEventListener('change', e=>{
+  applyTheme(e.target.value);
+});
+
+/* --- EXPORT CHAT --- */
+const exportBtn = document.createElement('button');
+exportBtn.textContent = 'Export Chat';
+exportBtn.style.background = '#00bfff';
+exportBtn.style.color = '#fff';
+exportBtn.style.marginLeft = '.5em';
+exportBtn.onclick = () => {
+  const blob = new Blob([JSON.stringify(chatHistory,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'chat_history.json';
+  a.click();
+};
+document.getElementById('inputArea').appendChild(exportBtn);
+
+/* --- IMPORT CHAT --- */
+const importChatBtn = document.getElementById('importChatBtn');
+const importChatFile = document.getElementById('importChatFile');
+
+importChatBtn.addEventListener('click',()=>importChatFile.click());
+importChatFile.addEventListener('change', async (e)=>{
+  const file=e.target.files[0];
+  if(!file)return;
+  try{
+    const text=await file.text();
+    const importedChat=JSON.parse(text);
+    if(!Array.isArray(importedChat))throw new Error('Invalid file');
+    document.getElementById('chat').innerHTML='';
+    chatHistory=[];
+    importedChat.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:true}));
+    localStorage.setItem('chatHistory',JSON.stringify(chatHistory));
+    addMessage('System','Chat imported successfully!','system',{save:false});
+  }catch(err){
+    alert('Import failed: invalid or unreadable file.');
+  }
+  e.target.value='';
+});
+
+/* --- HISTORY VIEW --- */
 const historyBtn=document.getElementById('historyBtn');
 const historyFrame=document.getElementById('historyFrame');
 const closeHistory=document.getElementById('closeHistory');
 historyBtn.onclick=()=>{
-  historyFrame.src='/api?view=history';
+  const html=`<html><body style="font-family:sans-serif;background:#111;color:#fff;padding:1em;">
+  <h2>Chat History</h2>${chatHistory.map(m=>`<p><b>${m.sender}:</b> ${m.text}</p>`).join('')}</body></html>`;
+  const blob=new Blob([html],{type:'text/html'});
+  historyFrame.src=URL.createObjectURL(blob);
   historyFrame.style.display='block';
   closeHistory.style.display='block';
 };
@@ -237,163 +221,6 @@ closeHistory.onclick=()=>{
   historyFrame.style.display='none';
   closeHistory.style.display='none';
 };
-
-// --- EXPORT CHAT ---
-const exportBtn = document.createElement('button');
-exportBtn.textContent = 'Export Chat';
-exportBtn.style.background = '#00bfff';
-exportBtn.style.color = '#fff';
-exportBtn.style.marginLeft = '.5em';
-exportBtn.onclick = () => {
-  const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'chat_history.json';
-  a.click();
-  URL.revokeObjectURL(url);
-};
-document.getElementById('inputArea').appendChild(exportBtn);
-
-/* --- Mods Button --- */
-modsBtn.addEventListener("click", () => {
-  const modal = document.createElement("div");
-  modal.className =
-    "fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 z-50";
-  modal.innerHTML = `
-    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl max-w-md w-full text-gray-900 dark:text-white transition-all duration-300">
-      <h2 class="text-xl font-bold mb-4 text-center">Create Custom Theme</h2>
-      <label class="block mb-2">Theme Name:</label>
-      <input id="themeName" class="w-full mb-3 p-2 rounded bg-gray-100 dark:bg-gray-700" placeholder="MyTheme" />
-      <label class="block mb-2">Background:</label>
-      <input type="color" id="bgColor" class="w-full mb-3">
-      <label class="block mb-2">Text Color:</label>
-      <input type="color" id="textColor" class="w-full mb-3">
-      <label class="block mb-2">User Bubble:</label>
-      <input type="color" id="userColor" class="w-full mb-3">
-      <label class="block mb-2">AI Bubble:</label>
-      <input type="color" id="aiColor" class="w-full mb-4">
-      <div class="flex justify-between">
-        <button id="previewTheme" class="px-3 py-2 bg-blue-600 text-white rounded">Preview</button>
-        <button id="saveTheme" class="px-3 py-2 bg-green-600 text-white rounded">Save</button>
-        <button id="cancelTheme" class="px-3 py-2 bg-gray-500 text-white rounded">Cancel</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
-
-  modal.querySelector("#cancelTheme").onclick = () => modal.remove();
-
-  modal.querySelector("#previewTheme").onclick = () => {
-    const colors = getThemeInputs();
-    Object.entries(colors).forEach(([k, v]) =>
-      document.documentElement.style.setProperty(k, v)
-    );
-  };
-
-  modal.querySelector("#saveTheme").onclick = () => {
-    const name = modal.querySelector("#themeName").value.trim() || "Custom";
-    const colors = getThemeInputs();
-    const customThemes = JSON.parse(localStorage.getItem("customThemes") || "[]");
-    customThemes.push({ name, colors });
-    localStorage.setItem("customThemes", JSON.stringify(customThemes));
-    modal.remove();
-    location.reload();
-  };
-
-  function getThemeInputs() {
-    return {
-      "--bg": modal.querySelector("#bgColor").value,
-      "--text": modal.querySelector("#textColor").value,
-      "--user-bubble": modal.querySelector("#userColor").value,
-      "--ai-bubble": modal.querySelector("#aiColor").value
-    };
-  }
-});
-
-// --- IMPORT CHAT ---
-window.addEventListener('DOMContentLoaded', () => {
-  const importChatBtn = document.getElementById('importChatBtn');
-  const importChatFile = document.getElementById('importChatFile');
-  const chat = document.getElementById('chat');
-
-  if (!importChatBtn || !importChatFile) {
-    console.error("Import elements not found!");
-    return;
-  }
-
-  importChatBtn.addEventListener('click', () => {
-    importChatFile.click();
-  });
-
-  importChatFile.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    try {
-      const text = await file.text();
-      const importedChat = JSON.parse(text);
-
-      if (!Array.isArray(importedChat)) {
-        alert('Invalid chat file (not a valid array).');
-        return;
-      }
-
-      // Clear chat + memory
-      chat.innerHTML = '';
-      chatHistory = [];
-
-      // Add imported messages
-      importedChat.forEach(msg => {
-        if (msg.sender && msg.text && msg.cls) {
-          addMessage(msg.sender, msg.text, msg.cls, { save: true });
-        }
-      });
-
-      // Save & apply theme
-      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-      applyTheme(currentTheme);
-
-      addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-
-    } catch (err) {
-      console.error('Import failed:', err);
-      alert('Invalid or unreadable chat file!');
-    }
-
-    // Reset input for next import
-    e.target.value = '';
-  });
-});
-
-// Save & show success
-localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-
-    // Persist in localStorage
-    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
-
-    // Optional backend sync (skip if not needed)
-    try {
-      await fetch('/api', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memory: chatHistory })
-      });
-    } catch (err) {
-      console.warn('Backend sync skipped');
-    }
-
-    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-
-  } catch (err) {
-    console.error('Import failed:', err);
-    alert('Invalid or unreadable chat file!');
-  }
-
-  // Reset file input so it can be used again
-  e.target.value = '';
-});
 </script>
 </body>
 </html>
