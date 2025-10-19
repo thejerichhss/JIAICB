@@ -123,18 +123,32 @@ function addMessage(sender,text,cls,options={save:true}){
 chatHistory.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:false}));
 
 /* --- SEND MESSAGE --- */
-async function sendMessage(){
-  const prompt=document.getElementById('prompt');
-  const text=prompt.value.trim();
-  if(!text) return;
-  addMessage('You',text,'user');
-  prompt.value='';
-  try{
-    const res=await fetch(`/api?input=${encodeURIComponent(text)}`);
-    const reply=await res.text();
-    addMessage('AI',reply,'ai');
-  }catch{
-    addMessage('System','Error contacting API.','system');
+async function sendMessage() {
+  const prompt = document.getElementById('prompt');
+  const text = prompt.value.trim();
+  if (!text) return;
+
+  addMessage('You', text, 'user');
+  prompt.value = '';
+  showTyping();
+
+  try {
+    const res = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: text,
+        memory: chatHistory // <-- send imported chat as context
+      })
+    });
+
+    const reply = await res.text();
+    hideTyping();
+    addMessage('AI', reply, 'ai');
+
+  } catch {
+    hideTyping();
+    addMessage('System', 'Error connecting to API.', 'system');
   }
 }
 document.getElementById('sendBtn').onclick=sendMessage;
