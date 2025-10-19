@@ -275,7 +275,7 @@ async function sendMessage(){
   if(promptEl) promptEl.value = '';
   showTyping();
   try{
-    const res = await fetch(`/api?input=${encodeURIComponent(text)}&device=${deviceId}`);
+    const res = await fetch(`https://jiaicb.onrender.com/api?input=${encodeURIComponent(text)}&device=${deviceId}`);
     const reply = await res.text();
     hideTyping();
     addMessage('AI', reply, 'ai');
