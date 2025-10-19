@@ -45,6 +45,10 @@
   <div style="text-align:center;">
     <button id="previewTheme">Preview</button>
     <button id="saveTheme">Save</button>
+    <button id="exportThemeBtn" style="background:#00bfff;color:white;margin-top:5px;">Export Theme</button>
+    <button id="importThemeBtn" style="background:#50fa7b;color:white;margin-top:5px;">Import Theme</button>
+    <input type="file" id="importThemeFile" accept=".json" style="display:none;">
+
     <button id="closeTheme">Close</button>
   </div>
 </div>
@@ -212,6 +216,47 @@ document.getElementById('previewTheme').onclick=()=>{
     if(k==='systemText') document.querySelectorAll('.system').forEach(e=>e.style.color=v);
   });
 };
+
+// EXPORT THEME
+document.getElementById('exportThemeBtn').onclick = () => {
+    const themeData = {
+        background: document.getElementById('bgColor').value,
+        chatBackground: document.getElementById('chatBgColor').value,
+        userBubble: document.getElementById('userColor').value,
+        aiBubble: document.getElementById('aiColor').value,
+        systemText: document.getElementById('systemColor').value
+    };
+    const blob = new Blob([JSON.stringify(themeData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'theme.json';
+    a.click();
+    URL.revokeObjectURL(url);
+};
+
+// IMPORT THEME
+const importThemeFile = document.getElementById('importThemeFile');
+document.getElementById('importThemeBtn').onclick = () => importThemeFile.click();
+
+importThemeFile.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const t = JSON.parse(text);
+        document.getElementById('bgColor').value = t.background || '#111';
+        document.getElementById('chatBgColor').value = t.chatBackground || '#222';
+        document.getElementById('userColor').value = t.userBubble || '#6272a4';
+        document.getElementById('aiColor').value = t.aiBubble || '#50fa7b';
+        document.getElementById('systemColor').value = t.systemText || '#ff5555';
+        // Preview immediately
+        document.getElementById('previewTheme').click();
+    } catch {
+        alert('Invalid theme file!');
+    }
+    e.target.value = '';
+});
 
 document.getElementById('saveTheme').onclick=()=>{
   const name=prompt('Theme name?','Custom');
