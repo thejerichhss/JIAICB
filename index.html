@@ -143,14 +143,33 @@ function addMessage(sender, text, cls, options={save:true}){
 chatHistory.forEach(msg => addMessage(msg.sender,msg.text,msg.cls,{save:false}));
 
 /* --- SEND MESSAGE --- */
-async function sendMessage(){
-  const prompt=document.getElementById('prompt');
-  const text=prompt.value.trim();
-  if(!text)return;
-  addMessage('You',text,'user');
-  prompt.value='';
-  addMessage('AI','(Simulated AI response placeholder)','ai');
+async function sendMessage() {
+  const prompt = document.getElementById('prompt');
+  const text = prompt.value.trim();
+  if (!text) return;
+
+  addMessage('You', text, 'user');
+  prompt.value = '';
+  showTyping();
+
+  try {
+    // Only fetch from /api if you have a real backend
+    const res = await fetch(`/api?input=${encodeURIComponent(text)}`);
+    if (!res.ok) throw new Error('API not available');
+    const reply = await res.text();
+
+    hideTyping();
+    addMessage('AI', reply, 'ai');
+
+  } catch {
+    // Do NOT add a placeholder
+    hideTyping();
+    // Optionally just log or show a system message
+    // addMessage('System', 'No AI response available.', 'system', { save: false });
+    console.warn('AI response not available');
+  }
 }
+
 document.getElementById('sendBtn').onclick=sendMessage;
 document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Enter')sendMessage();});
 
