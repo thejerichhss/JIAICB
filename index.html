@@ -305,11 +305,11 @@ exportChatBtn.onclick = () => {
 };
 inputArea.appendChild(exportChatBtn);
 
-/* ---------- Import Chat (Replace Memory, Fix Duplicate) ---------- */
+/* ---------- Import Chat (Fix Duplicate + Keep Everything Working) ---------- */
 if (importChatBtn && importChatFile) {
-  importChatBtn.addEventListener('click', () => importChatFile.click());
+  importChatBtn.addEventListener("click", () => importChatFile.click());
 
-  importChatFile.addEventListener('change', async e => {
+  importChatFile.addEventListener("change", async e => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -318,30 +318,46 @@ if (importChatBtn && importChatFile) {
 
     try {
       const text = await file.text();
-      const imported = JSON.parse(text);
+      const importedChat = JSON.parse(text);
 
-      // 1️⃣ Clear memory first
-      chat.innerHTML = '';
+      // Clear current chat display and memory
+      chat.innerHTML = "";
       chatHistory = [];
-      localStorage.removeItem('chatHistory');
+      localStorage.removeItem("chatHistory");
 
-      // 2️⃣ Display imported chat (no saving during loop)
-      imported.forEach(m => addMessage(m.sender, m.text, m.cls, { save: false }));
+      // Add imported chat without re-saving each message
+      importedChat.forEach(msg => {
+        addMessage(msg.sender, msg.text, msg.cls, { save: false });
+      });
 
-      // 3️⃣ Save once after everything is loaded
-      chatHistory = imported;
-      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+      // Save once to localStorage
+      chatHistory = importedChat;
+      localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
 
-      // 4️⃣ Optional backend sync
-      try {
-        await fetch('/api', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memory: chatHistory })
-        });
-      } catch (err) {
-        console.warn('Backend sync failed', err);
-      }
+      // Update backend memory (non-blocking)
+      fetch("/api", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memory: chatHistory })
+      }).catch(err => console.warn("Memory sync failed:", err));
+
+      addMessage("System", "Chat imported successfully!", "system", { save: false });
+
+      // Refresh history iframe
+      const frame = document.getElementById("historyFrame");
+      if (frame) frame.src = "/api?view=history&" + Date.now();
+
+      // Scroll to bottom for convenience
+      chat.scrollTop = chat.scrollHeight;
+
+    } catch (err) {
+      console.error("Import error:", err);
+      alert("Invalid or corrupted chat file.");
+    } finally {
+      e.target.value = "";
+    }
+  });
+}
 
       addMessage('System', 'Chat imported successfully!', 'system', { save: false });
       importedJustNow = true;
