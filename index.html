@@ -119,6 +119,7 @@
 let currentTheme = localStorage.getItem('theme') || 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+importedJustNow = true;
 
 /* ---------- Elements ---------- */
 const chat = document.getElementById('chat');
@@ -222,9 +223,10 @@ function addMessage(sender, text, cls, options = { save: true }) {
 }
 
 /* ---------- Load saved chat into view on startup (do not duplicate backend memory) ---------- */
+let importedJustNow = false;
+
 (function loadSavedChat(){
-  if (!chatHistory || !chatHistory.length) return;
-  // render without saving (we already have it in chatHistory)
+  if (!chatHistory || !chatHistory.length || importedJustNow) return;
   chatHistory.forEach(m => addMessage(m.sender, m.text, m.cls, { save: false }));
 })();
 
