@@ -194,8 +194,40 @@ function animateIn(el){
     el.style.transform = 'translateY(0)';
   });
 }
+function smoothScrollToBottom() {
+  chat.scrollTo({
+    top: chat.scrollHeight,
+    behavior: 'smooth'
+  });
+}
 
-function addMessage(sender, text, cls, options = { save: true }){
+function addMessage(sender, text, cls, options = { save: true }) {
+  const dateKey = new Date().toLocaleDateString();
+  let section = chat.querySelector(`.chat-section[data-date="${dateKey}"]`);
+  if(!section) {
+    section = document.createElement('div');
+    section.className = 'chat-section';
+    section.dataset.date = dateKey;
+    section.innerHTML = `
+      <div class="section-header" style="cursor:pointer; font-weight:bold; margin-top:1rem; background:#333; padding:.3rem .6rem; border-radius:6px;">
+        ${dateKey} ▼
+      </div>
+      <div class="section-content"></div>
+    `;
+    chat.appendChild(section);
+
+    // toggle collapse
+    const header = section.querySelector('.section-header');
+    const content = section.querySelector('.section-content');
+    header.addEventListener('click', ()=>{
+      const visible = content.style.display !== 'none';
+      content.style.display = visible ? 'none' : 'block';
+      header.textContent = `${dateKey} ${visible ? '►' : '▼'}`;
+    });
+  }
+
+  const content = section.querySelector('.section-content');
+
   const msg = document.createElement('div');
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
@@ -205,9 +237,9 @@ function addMessage(sender, text, cls, options = { save: true }){
   if(cls==='ai') msg.style.background = theme.aiBubble;
   if(cls==='system'){ msg.style.color = theme.systemText; msg.style.textAlign = 'left'; }
 
-  chat.appendChild(msg);
+  content.appendChild(msg);
   animateIn(msg);
-  chat.scrollTop = chat.scrollHeight;
+  smoothScrollToBottom();
 
   if(options.save){
     chatHistory.push({ sender, text, cls });
@@ -224,7 +256,7 @@ function showTyping(){
   t.textContent = 'AI is typing...';
   t.style.background = (getAllThemes()[currentTheme] || baseThemes.dark).aiBubble;
   chat.appendChild(t);
-  chat.scrollTop = chat.scrollHeight;
+  smoothScrollToBottom();
 }
 function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
 
