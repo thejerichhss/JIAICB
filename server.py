@@ -1,84 +1,90 @@
 from flask import Flask, request, jsonify
-import requests
-import json
 import os
+import json
+import requests
 
 app = Flask(__name__)
-API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Each device has its own conversation memory
-memory_store = {}
+# Memory store per device (in-memory; for persistence, you can use a JSON file or DB)
+MEMORY_FILE = "memory.json"
+if os.path.exists(MEMORY_FILE):
+    with open(MEMORY_FILE, "r") as f:
+        device_memory = json.load(f)
+else:
+    device_memory = {}
+
+API_KEY = os.environ.get("API_KEY")  # Gemini API key
+
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
+def save_memory():
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(device_memory, f, indent=2)
 
 @app.route("/api", methods=["GET", "POST"])
-def chat():
-    global memory_store
+def api():
+    # Get device ID from query or JSON
+    device_id = request.args.get("device") or request.json.get("device") if request.is_json else None
+    if not device_id:
+        return jsonify({"error": "Device ID required"}), 400
 
-    # Handle POST (imported chat)
-    if request.method == "POST":
-        data = request.get_json(force=True)
-        memory_store = data.get("memory", {})
-        return jsonify({"status": "ok"})
+    # Clear memory if requested
+    if request.args.get("clear") == "true":
+        device_memory[device_id] = []
+        save_memory()
+        return jsonify({"status": "cleared"})
 
-    device_id = request.args.get("device", "unknown")
-    clear = request.args.get("clear")
-    view = request.args.get("view")
+    # View history
+    if request.args.get("view") == "history":
+        return jsonify(device_memory.get(device_id, []))
+
+    # Handle POST import from front-end
+    if request.method == "POST" and request.is_json:
+        data = request.json
+        if "memory" in data:
+            device_memory[device_id] = data["memory"]
+            save_memory()
+            return jsonify({"status": "memory updated"})
+
+    # Process user input
     user_input = request.args.get("input")
-
-    # Clear device memory
-    if clear:
-        memory_store.pop(device_id, None)
-        return "Memory cleared for device."
-
-    # Show memory as HTML (history view)
-    if view == "history":
-        history = memory_store.get(device_id, [])
-        html = "<html><body style='background:#111;color:#eee;font-family:sans-serif;'>"
-        html += "<h2>Chat History for Device</h2>"
-        for msg in history:
-            html += f"<p><b>{msg['sender']}:</b> {msg['text']}</p>"
-        html += "</body></html>"
-        return html
-
-    # Process normal user input
     if not user_input:
-        return "No input provided.", 400
+        return jsonify({"error": "No input provided"}), 400
 
-    # Initialize memory for this device
-    if device_id not in memory_store:
-        memory_store[device_id] = []
-
-    # Add user message
-    memory_store[device_id].append({"sender": "You", "text": user_input, "cls": "user"})
-
-    # Prepare Gemini payload
+    # Build Gemini request payload
     payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [{"text": user_input}]
-            }
-        ]
+        "prompt": {"text": user_input},
+        "temperature": 0.7,
+        "candidateCount": 1
     }
 
     try:
         resp = requests.post(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+            GEMINI_URL,
             headers={"Content-Type": "application/json"},
             params={"key": API_KEY},
             json=payload,
             timeout=20
         )
         resp.raise_for_status()
-        data = resp.json()
-        output_text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+        reply = resp.json()
+        text_reply = reply.get("candidates", [{}])[0].get("content", {}).get("text", "No response.")
     except Exception as e:
-        output_text = f"Error: {e}"
+        print("Error contacting Gemini:", e)
+        text_reply = "Error contacting AI API."
 
-    # Save AI response
-    memory_store[device_id].append({"sender": "AI", "text": output_text, "cls": "ai"})
+    # Save to memory
+    device_memory.setdefault(device_id, []).append({"sender": "You", "text": user_input, "cls": "user"})
+    device_memory.setdefault(device_id, []).append({"sender": "AI", "text": text_reply, "cls": "ai"})
+    save_memory()
 
-    return output_text
+    return text_reply
 
+# Health check
+@app.route("/")
+def index():
+    return "Server is running."
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
