@@ -156,8 +156,7 @@ document.getElementById('prompt').addEventListener('keydown',e=>{if(e.key==='Ent
 
 /* --- CLEAR MEMORY --- */
 document.getElementById('clearMemory').addEventListener('click',()=>{
-  document.getElementById('chat').innerHTML='';
-  chatHistory=[];
+  chatHistory.length = 0; // clear memory only, not UI
   localStorage.removeItem('chatHistory');
   addMessage('System','Memory cleared!','system',{save:false});
 });
