@@ -464,28 +464,42 @@ importChatBtn.addEventListener('click', () => importChatFile.click());
 importChatFile.addEventListener('change', async e => {
   const file = e.target.files[0];
   if (!file) return;
+
+  // Step 1: Warn the user before wiping existing memory
+  const confirmReplace = confirm(
+    "[!] Importing this chat will completely replace your current conversation memory.\n\n" +
+    "Your existing messages will be lost.\n\n" +
+    "Do you want to continue?"
+  );
+
+  if (!confirmReplace) {
+    // User canceled the import
+    e.target.value = '';
+    addMessage('System', 'Import canceled.', 'system', { save: false });
+    return;
+  }
+
   try {
     const text = await file.text();
     const imported = JSON.parse(text);
     if (!Array.isArray(imported)) throw new Error('Invalid format');
 
-    // Reset chat view and memory
+    // Step 2: Clear current chat + memory
     chatEl.innerHTML = '';
     chatHistory = [];
 
-    // Add each message and save to chatHistory (this will persist locally)
+    // Step 3: Add imported messages (and save them)
     imported.forEach(msg => {
-      // defend against missing fields
       const sender = msg.sender || (msg.cls === 'user' ? 'You' : msg.cls === 'ai' ? 'AI' : 'System');
       const textMsg = msg.text || '';
       const cls = msg.cls || 'ai';
       addMessage(sender, textMsg, cls, { save: true });
     });
 
-    // persist localStorage
+    // Step 4: Save new memory locally
     localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
 
-    // Try to sync to backend memory
+    // Step 5: Sync to backend memory (optional)
     try {
       await fetch('/api', {
         method: 'POST',
@@ -496,13 +510,14 @@ importChatFile.addEventListener('change', async e => {
       console.warn('Backend memory sync failed:', err);
     }
 
-    addMessage('System', 'Chat imported successfully!', 'system', { save: false });
+    // Step 6: Success message
+    addMessage('System', 'Chat imported successfully! (Previous conversation replaced)', 'system', { save: false });
 
   } catch (err) {
     console.error(err);
     alert('Invalid chat file (must be JSON array of messages).');
   } finally {
-    // reset input so same file can be selected again
+    // Reset input so same file can be chosen again
     e.target.value = '';
   }
 });
