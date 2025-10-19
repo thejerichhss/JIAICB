@@ -119,7 +119,7 @@
 let currentTheme = localStorage.getItem('theme') || 'dark';
 let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
 let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-importedJustNow = true;
+let importedJustNow = false;
 
 /* ---------- Elements ---------- */
 const chat = document.getElementById('chat');
@@ -185,7 +185,6 @@ function applyTheme(name, override) {
   document.querySelectorAll('.ai').forEach(el=>el.style.background = theme.aiBubble);
   document.querySelectorAll('.system').forEach(el=>el.style.color = theme.systemText);
 
-  // typing indicator
   const typing = document.getElementById('typing');
   if (typing) typing.style.background = theme.aiBubble;
 }
@@ -206,7 +205,6 @@ function addMessage(sender, text, cls, options = { save: true }) {
   msg.className = `message ${cls}`;
   msg.innerHTML = `<b>${sender}:</b> <span class="messageText">${text}</span>`;
 
-  // color according to current theme
   const theme = getAllThemes()[currentTheme] || baseThemes.dark;
   if (cls === 'user') msg.style.background = theme.userBubble;
   if (cls === 'ai') msg.style.background = theme.aiBubble;
@@ -222,15 +220,14 @@ function addMessage(sender, text, cls, options = { save: true }) {
   }
 }
 
-/* ---------- Load saved chat into view on startup (do not duplicate backend memory) ---------- */
-let importedJustNow = false;
-
+/* ---------- Load saved chat ---------- */
 (function loadSavedChat(){
   if (!chatHistory || !chatHistory.length || importedJustNow) return;
+  chat.innerHTML = '';
   chatHistory.forEach(m => addMessage(m.sender, m.text, m.cls, { save: false }));
 })();
 
-/* ---------- Typing UI ---------- */
+/* ---------- Typing ---------- */
 function showTyping() {
   if (!document.getElementById('typing')) {
     const t = document.createElement('div');
@@ -265,160 +262,26 @@ async function sendMessage() {
   }
 }
 
-/* ---------- Wire send/enter ---------- */
+/* ---------- Buttons ---------- */
 if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 if (prompt) prompt.addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
 
-/* ---------- Clear Memory ---------- */
 if (clearMemoryBtn) clearMemoryBtn.addEventListener('click', async () => {
-  try { await fetch('/api?clear=true'); } catch(e){ /* ignore */ }
+  try { await fetch('/api?clear=true'); } catch(e){}
   chat.innerHTML = '';
   chatHistory = [];
   localStorage.removeItem('chatHistory');
   addMessage('System','Memory cleared!','system', { save: false });
 });
 
-/* ---------- Theme selector wiring ---------- */
+/* ---------- Theme Selector ---------- */
 if (themeSelector) {
   themeSelector.addEventListener('change', e => applyTheme(e.target.value));
 }
 applyTheme(currentTheme);
 
-/* ---------- Custom Themes Modal: preview/save/import/export ---------- */
-function refreshCustomThemeOptions() {
-  // ensure themeSelector contains custom theme options and doesn't duplicate
-  const sel = themeSelector;
-  // remove existing custom options first (we'll re-add)
-  [...sel.querySelectorAll('option')].forEach(opt => {
-    if (opt.dataset.custom === 'true') opt.remove();
-  });
-  for (const name of Object.keys(customThemes)) {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name + ' (Custom)';
-    opt.dataset.custom = 'true';
-    sel.appendChild(opt);
-  }
-
-  // refresh modal list
-  const list = document.getElementById('customThemeList');
-  if (!list) return;
-  list.innerHTML = '';
-  for (const [name, t] of Object.entries(customThemes)) {
-    const li = document.createElement('li');
-    li.style.display = 'flex';
-    li.style.justifyContent = 'space-between';
-    li.style.alignItems = 'center';
-    li.style.marginBottom = '6px';
-    li.innerHTML = `<span>${name}</span>
-      <div>
-        <button class="applyBtn" data-name="${name}" style="margin-right:6px">Apply</button>
-        <button class="deleteBtn" data-name="${name}">Delete</button>
-      </div>`;
-    list.appendChild(li);
-  }
-}
-refreshCustomThemeOptions();
-
-if (modsbtn) modsbtn.addEventListener('click', () => {
-  if (!modal) return alert('Custom theme modal not found.');
-  modal.style.display = 'block';
-  refreshCustomThemeOptions();
-});
-if (closeTheme) closeTheme.addEventListener('click', () => modal.style.display = 'none');
-
-if (previewThemeBtn) previewThemeBtn.addEventListener('click', () => {
-  const theme = {
-    background: bgColor.value,
-    chatBackground: chatBgColor.value,
-    userBubble: userColor.value,
-    aiBubble: aiColor.value,
-    systemText: systemColor.value,
-    inputBackground: "#222",
-    inputText: "#fff"
-  };
-  applyTheme('custom', theme);
-});
-
-if (saveThemeBtn) saveThemeBtn.addEventListener('click', () => {
-  const name = "Custom_" + Date.now();
-  const theme = {
-    background: bgColor.value,
-    chatBackground: chatBgColor.value,
-    userBubble: userColor.value,
-    aiBubble: aiColor.value,
-    systemText: systemColor.value,
-    inputBackground: "#222",
-    inputText: "#fff"
-  };
-  customThemes[name] = theme;
-  localStorage.setItem('customThemes', JSON.stringify(customThemes));
-  refreshCustomThemeOptions();
-  // add option and select it
-  const opt = document.createElement('option');
-  opt.value = name; opt.textContent = name + ' (Custom)'; opt.dataset.custom = 'true';
-  themeSelector.appendChild(opt);
-  applyTheme(name, theme);
-  modal.style.display = 'none';
-});
-
-if (importThemeBtn && importThemeFile) importThemeBtn.addEventListener('click', () => importThemeFile.click());
-if (importThemeFile) importThemeFile.addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const text = await file.text();
-    const themeData = JSON.parse(text);
-    if (!themeData.name) themeData.name = "Imported_" + Date.now();
-    customThemes[themeData.name] = themeData;
-    localStorage.setItem('customThemes', JSON.stringify(customThemes));
-    refreshCustomThemeOptions();
-    // add to selector
-    const opt = document.createElement('option'); opt.value = themeData.name; opt.textContent = themeData.name + ' (Custom)'; opt.dataset.custom = 'true';
-    themeSelector.appendChild(opt);
-    alert(`Theme "${themeData.name}" imported.`);
-  } catch (err) {
-    alert('Invalid theme file.');
-  }
-  e.target.value = '';
-});
-if (exportThemeBtn) exportThemeBtn.addEventListener('click', () => {
-  const theme = {
-    background: bgColor.value,
-    chatBackground: chatBgColor.value,
-    userBubble: userColor.value,
-    aiBubble: aiColor.value,
-    systemText: systemColor.value,
-    inputBackground: "#222",
-    inputText: "#fff",
-    name: "CustomTheme_" + Date.now()
-  };
-  const blob = new Blob([JSON.stringify(theme, null, 2)], { type: 'application/json' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = theme.name + '.json'; a.click();
-  URL.revokeObjectURL(a.href);
-});
-
-/* allow apply/delete in modal list */
-const customList = document.getElementById('customThemeList');
-if (customList) customList.addEventListener('click', e => {
-  if (e.target.classList.contains('applyBtn')) {
-    const name = e.target.dataset.name;
-    applyTheme(name);
-    themeSelector.value = name;
-  } else if (e.target.classList.contains('deleteBtn')) {
-    const name = e.target.dataset.name;
-    delete customThemes[name];
-    localStorage.setItem('customThemes', JSON.stringify(customThemes));
-    // remove from selector
-    const opt = themeSelector.querySelector(`option[value="${name}"]`);
-    if (opt) opt.remove();
-    refreshCustomThemeOptions();
-  }
-});
-
-/* ---------- History iframe ---------- */
+/* ---------- History ---------- */
 if (historyBtn) historyBtn.addEventListener('click', () => {
-  // show the server-side memory endpoint in iframe
   historyFrame.src = '/api?view=history&' + Date.now();
   historyFrame.style.display = 'block';
   closeHistory.style.display = 'block';
@@ -428,7 +291,7 @@ if (closeHistory) closeHistory.addEventListener('click', () => {
   closeHistory.style.display = 'none';
 });
 
-/* ---------- Export Chat button ---------- */
+/* ---------- Export Chat ---------- */
 const exportChatBtn = document.createElement('button');
 exportChatBtn.textContent = 'Export Chat';
 exportChatBtn.style.marginLeft = '0.5em';
@@ -442,30 +305,25 @@ exportChatBtn.onclick = () => {
 };
 inputArea.appendChild(exportChatBtn);
 
-/* ---------- Import Chat (replace memory, with warning) ---------- */
+/* ---------- Import Chat (Replace Memory, Fix Duplicate) ---------- */
 if (importChatBtn && importChatFile) {
   importChatBtn.addEventListener('click', () => importChatFile.click());
 
   importChatFile.addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
-    // confirm replace
     const proceed = confirm("⚠️ Import will REPLACE current conversation memory. Continue?");
     if (!proceed) { e.target.value = ''; return; }
 
     try {
       const text = await file.text();
       const imported = JSON.parse(text);
-      // replace local memory and UI
       chat.innerHTML = '';
       chatHistory = [];
-      // add imported messages and save them
       imported.forEach(m => addMessage(m.sender, m.text, m.cls, { save: true }));
-
-      // persist locally
       localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+      importedJustNow = true;
 
-      // sync to backend memory
       try {
         await fetch('/api', {
           method: 'POST',
@@ -477,7 +335,6 @@ if (importChatBtn && importChatFile) {
       }
 
       addMessage('System', 'Chat imported successfully!', 'system', { save: false });
-      // refresh the history iframe to show backend memory if needed
       historyFrame.src = '/api?view=history&' + Date.now();
     } catch (err) {
       console.error(err);
@@ -488,9 +345,8 @@ if (importChatBtn && importChatFile) {
   });
 }
 
-/* ---------- Make sure theme colors apply to previously loaded saved chat ---------- */
+/* ---------- Reapply Theme Colors ---------- */
 (function reapplyThemeToLoaded() {
-  // already rendered messages exist; ensure they match theme
   const theme = getAllThemes()[currentTheme] || baseThemes.dark;
   document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
   document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
