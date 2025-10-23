@@ -532,7 +532,60 @@ window.addEventListener("keydown", e => {
 /* ---------- Final initialization ---------- */
 applyTheme(currentTheme);
 
-/* ---------- End of script ---------- */
+/* ---------- Patch: Auto-apply saved custom theme ---------- */
+saveThemeBtn.onclick = () => {
+  const name = prompt("Name this theme:", `Custom ${new Date().toLocaleString()}`);
+  if (!name) return;
+  const t = { name, bg: bgColor.value, chat: chatBgColor.value, user: userColor.value, ai: aiColor.value, sys: systemColor.value, text: "#eee" };
+  const saved = JSON.parse(localStorage.getItem("customThemes") || "[]");
+  saved.push(t);
+  localStorage.setItem("customThemes", JSON.stringify(saved));
+  loadCustomThemeList();
+  
+  // Auto-apply the new custom theme
+  themes.custom = t;
+  applyTheme("custom");
+  addMessage("System", `Theme "${name}" saved and applied.`, "system", false);
+};
+
+/* ---------- Patch: Keep "Custom" selected in theme selector ---------- */
+function applyTheme(name, options = {}) {
+  const t = (name === "custom") ? (themes.custom || options) : (themes[name] || themes.dark);
+  if (!t) return;
+  currentTheme = name;
+  localStorage.setItem("theme", name);
+
+  // apply core colors
+  document.body.style.background = t.bg;
+  document.body.style.color = t.text;
+  chat.style.background = t.chat;
+
+  // update message bubbles & system messages
+  document.querySelectorAll(".message.user").forEach(el => el.style.background = t.user);
+  document.querySelectorAll(".message.ai").forEach(el => el.style.background = t.ai);
+  document.querySelectorAll(".message.system").forEach(el => el.style.color = t.sys);
+
+  // update theme selector UI
+  themeMenu.value = name;
+}
+
+/* ---------- Patch: Ensure imported theme applies system color ---------- */
+importThemeFile.onchange = async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const t = JSON.parse(text);
+    if (!t || !t.bg) throw new Error("invalid theme");
+    themes.custom = t;
+    applyTheme("custom", t);
+    addMessage("System", "Theme imported and applied.", "system", false);
+  } catch (err) {
+    addMessage("System", "Invalid theme file.", "system", false);
+  } finally {
+    importThemeFile.value = "";
+  }
+};
 </script>
 </body>
 </html>
