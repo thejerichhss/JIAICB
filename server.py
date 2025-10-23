@@ -130,16 +130,22 @@ def history_page():
             return "<p style='color:white'>No memory file found.</p>"
 
         with open(MEMORY_FILE, "r") as f:
-            data = json.load(f)
+            all_data = json.load(f)
 
-        html_output = "<html><head><title>Chat History</title></head>"
-        html_output += "<body style='background:#111;color:white;font-family:monospace;padding:10px;'>"
-        html_output += "<h2>Chat History</h2><hr>"
+        html_output = """
+        <html><head><title>Chat History</title></head>
+        <body style='background:#111;color:white;font-family:monospace;padding:10px;'>
+        <h2>Chat History</h2><hr>
+        """
 
-        for entry in data:
-            sender = entry.get("sender", "Unknown")
-            text = entry.get("text", "").replace("\n", "<br>")
-            html_output += f"<p><b style='color:#6cf'>{sender}:</b> {text}</p>"
+        # Loop through each device’s chat
+        for device, entries in all_data.items():
+            html_output += f"<h3 style='color:#9cf'>Device: {device}</h3><hr>"
+            for entry in entries:
+                sender = entry.get("sender", "Unknown")
+                text = entry.get("text", "").replace("\n", "<br>")
+                html_output += f"<p><b style='color:#6cf'>{sender}:</b> {text}</p>"
+            html_output += "<hr>"
 
         html_output += "</body></html>"
         return html_output
