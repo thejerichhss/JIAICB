@@ -225,8 +225,11 @@ function addMessage(sender, text, cls, save = true) {
 let typingEl = null;
 function showTyping() {
   if (!typingEl) {
+    const t = themes[currentTheme] || themes.dark;
     typingEl = renderMessageElement("AI", "AI is typing...", "ai", new Date().toLocaleTimeString());
     typingEl.id = "typing";
+    typingEl.style.background = t.ai; // make sure bubble color matches current theme
+    typingEl.style.color = t.text;    // optional: text color matches theme
   }
 }
 function hideTyping() {
@@ -555,20 +558,22 @@ function applyTheme(name, options = {}) {
   currentTheme = name;
   localStorage.setItem("theme", name);
 
-  // apply core colors
   document.body.style.background = t.bg;
   document.body.style.color = t.text;
   chat.style.background = t.chat;
 
-  // update message bubbles & system messages
   document.querySelectorAll(".message.user").forEach(el => el.style.background = t.user);
   document.querySelectorAll(".message.ai").forEach(el => el.style.background = t.ai);
   document.querySelectorAll(".message.system").forEach(el => el.style.color = t.sys);
 
-  // update theme selector UI
+  // sync typing indicator if visible
+  if (typingEl) {
+    typingEl.style.background = t.ai;
+    typingEl.style.color = t.text;
+  }
+
   themeMenu.value = name;
 }
-
 /* ---------- Patch: Ensure imported theme applies system color ---------- */
 importThemeFile.onchange = async e => {
   const file = e.target.files[0];
