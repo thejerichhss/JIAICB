@@ -226,12 +226,43 @@ let typingEl = null;
 function showTyping() {
   if (!typingEl) {
     const t = themes[currentTheme] || themes.dark;
-    typingEl = renderMessageElement("AI", "AI is typing...", "ai", new Date().toLocaleTimeString());
+
+    typingEl = document.createElement("div");
+    typingEl.className = "message ai";
     typingEl.id = "typing";
-    typingEl.style.background = t.ai; // make sure bubble color matches current theme
-    typingEl.style.color = t.text;    // optional: text color matches theme
+
+    // header
+    const header = document.createElement("div");
+    header.className = "messageHeader";
+    header.innerHTML = `<b>AI</b> <small>${new Date().toLocaleTimeString()}</small>`;
+
+    // body with animated dots
+    const body = document.createElement("div");
+    body.className = "messageText";
+    const dotContainer = document.createElement("span");
+    for (let i = 0; i < 3; i++) {
+      const dot = document.createElement("span");
+      dot.className = "typingDots";
+      dotContainer.appendChild(dot);
+    }
+    body.appendChild(dotContainer);
+
+    typingEl.appendChild(header);
+    typingEl.appendChild(body);
+
+    chat.appendChild(typingEl);
+
+    // set bubble and text color according to theme
+    typingEl.style.background = t.ai;
+    typingEl.style.color = t.text;
+
+    void typingEl.offsetWidth;
+    typingEl.classList.add("show");
+
+    smoothScroll();
   }
 }
+
 function hideTyping() {
   if (typingEl) {
     typingEl.remove();
