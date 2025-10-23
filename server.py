@@ -17,6 +17,7 @@ def load_memory():
             with open(MEMORY_FILE, "r") as f:
                 return json.load(f)
         except Exception:
+            print("⚠️ Failed to load memory.json, resetting.")
             return {}
     return {}
 
@@ -25,17 +26,11 @@ def save_memory():
         with open(MEMORY_FILE, "w") as f:
             json.dump(app.memory, f)
     except Exception as e:
-        print("Error saving memory:", e)
+        print("❌ Error saving memory:", e)
 
-@app.before_first_request
-def startup():
-    app.memory = load_memory()
-    print("✅ Memory loaded:", len(app.memory), "devices")
-
-@app.teardown_appcontext
-def shutdown(exception=None):
-    save_memory()
-    print("💾 Memory saved.")
+# Load memory once at startup
+app.memory = load_memory()
+print(f"✅ Loaded memory for {len(app.memory)} devices")
 
 # ---------- ROUTES ----------
 @app.route('/')
@@ -52,9 +47,6 @@ def api():
     clear = request.args.get('clear', 'false').lower() == 'true'
     view = request.args.get('view', None)
 
-    if not hasattr(app, 'memory'):
-        app.memory = {}
-
     # Handle memory import via POST JSON
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
@@ -65,12 +57,12 @@ def api():
             save_memory()
             return "Memory imported successfully!", 200
 
-        # Regular chat input (POST body)
+        # Regular chat input via POST
         user_input = data.get("input", "").strip()
     else:
         user_input = request.args.get("input", "").strip()
 
-    # Handle clear memory
+    # Clear memory
     if clear:
         app.memory[device_id] = []
         save_memory()
@@ -80,15 +72,20 @@ def api():
     if view == "history":
         return jsonify(app.memory.get(device_id, []))
 
+    # Handle no input
     if not user_input:
         return "No input", 400
 
     # Add user message
     app.memory.setdefault(device_id, []).append({"sender": "You", "text": user_input})
 
+    # Keep memory from getting huge (optional cap)
+    if len(app.memory[device_id]) > 200:
+        app.memory[device_id] = app.memory[device_id][-200:]
+
     # ---------- GEMINI API ----------
     if not API_KEY:
-        reply = "Error: Missing API key."
+        reply = "Error: Missing Gemini API key."
     else:
         payload = {
             "contents": [
@@ -110,12 +107,10 @@ def api():
             )
             data = resp.json()
 
-            # Parse Gemini reply
             candidates = data.get("candidates", [])
             if candidates:
                 parts = candidates[0].get("content", {}).get("parts", [])
-                reply = "".join(p.get("text", "") for p in parts)
-                reply = reply.strip() or "No reply"
+                reply = "".join(p.get("text", "") for p in parts).strip() or "No reply"
             else:
                 reply = "No reply"
 
@@ -131,4 +126,5 @@ def api():
 # ---------- MAIN ----------
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
+    print(f"🚀 Server running on http://0.0.0.0:{port}")
     app.run(host='0.0.0.0', port=port)
