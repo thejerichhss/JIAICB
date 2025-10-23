@@ -115,182 +115,148 @@
   </div>
 
 <script>
-/* ---------- State & Elements ---------- */
-if (!localStorage.getItem("deviceId")) {
+/* ---------- Setup ---------- */
+if (!localStorage.getItem("deviceId"))
   localStorage.setItem("deviceId", crypto.randomUUID());
-}
 const deviceId = localStorage.getItem("deviceId");
-console.log("Device ID:", deviceId);
 
-const chat = document.getElementById('chat');
-const promptEl = document.getElementById('prompt');
-const sendBtn = document.getElementById('sendBtn');
-const clearMemoryBtn = document.getElementById('clearMemory');
-const historyBtn = document.getElementById('historyBtn');
-const historyFrame = document.getElementById('historyFrame');
-const closeHistory = document.getElementById('closeHistory');
-const themeSelector = document.getElementById('themeSelector');
+const chat = document.getElementById("chat");
+const promptEl = document.getElementById("prompt");
+const sendBtn = document.getElementById("sendBtn");
+const clearMemoryBtn = document.getElementById("clearMemory");
+const historyBtn = document.getElementById("historyBtn");
+const historyFrame = document.getElementById("historyFrame");
+const closeHistory = document.getElementById("closeHistory");
+const themeSelector = document.getElementById("themeSelector");
 
-const modsbtn = document.getElementById('modsbtn');
-const modal = document.getElementById('customThemeModal');
-const previewThemeBtn = document.getElementById('previewTheme');
-const saveThemeBtn = document.getElementById('saveTheme');
-const exportThemeBtn = document.getElementById('exportThemeBtn');
-const importThemeBtn = document.getElementById('importThemeBtn');
-const importThemeFile = document.getElementById('importThemeFile');
-const closeTheme = document.getElementById('closeTheme');
-const customThemeList = document.getElementById('customThemeList');
-
-const importChatBtn = document.getElementById('importChatBtn');
-const importChatFile = document.getElementById('importChatFile');
-const exportChatBtn = document.getElementById('exportChatBtn');
-const inputArea = document.getElementById('inputArea');
-
-let customThemes = JSON.parse(localStorage.getItem('customThemes') || '{}');
-let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
-let currentTheme = localStorage.getItem('theme') || 'dark';
-let loadedSavedChat = false;
+let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+let currentTheme = localStorage.getItem("theme") || "dark";
 
 /* ---------- Themes ---------- */
 const baseThemes = {
-  dark:{background:'#111',chatBackground:'#222',userBubble:'#6272a4',aiBubble:'#50fa7b',systemText:'#ff5555',inputBackground:'#222',inputText:'#fff'},
-  light:{background:'#f4f4f4',chatBackground:'#fff',userBubble:'#007bff',aiBubble:'#28a745',systemText:'#dc3545',inputBackground:'#fff',inputText:'#000'},
-  sunset:{background:'#ffecd1',chatBackground:'#ffe4c4',userBubble:'#ff7f50',aiBubble:'#ffa07a',systemText:'#ff4500',inputBackground:'#fff5e6',inputText:'#333'}
+  dark:{background:"#111",chatBackground:"#222",userBubble:"#6272a4",aiBubble:"#50fa7b",systemText:"#ff5555",inputBackground:"#222",inputText:"#fff"},
+  light:{background:"#f4f4f4",chatBackground:"#fff",userBubble:"#007bff",aiBubble:"#28a745",systemText:"#dc3545",inputBackground:"#fff",inputText:"#000"},
+  sunset:{background:"#ffecd1",chatBackground:"#ffe4c4",userBubble:"#ff7f50",aiBubble:"#ffa07a",systemText:"#ff4500",inputBackground:"#fff5e6",inputText:"#333"},
+  blue:{background:"#001a33",chatBackground:"#00264d",userBubble:"#3399ff",aiBubble:"#66ccff",systemText:"#99ccff",inputBackground:"#001a33",inputText:"#fff"},
 };
-const colorThemes = {
-  red:{background:'#2b0000',chatBackground:'#3d0c0c',userBubble:'#ff4d4d',aiBubble:'#ff9999',systemText:'#ffb3b3',inputBackground:'#4d0f0f',inputText:'#fff'},
-  orange:{background:'#2b1500',chatBackground:'#3d1f00',userBubble:'#ff7b00',aiBubble:'#ffb366',systemText:'#ffcc99',inputBackground:'#4d2600',inputText:'#fff'},
-  yellow:{background:'#2b2b00',chatBackground:'#3d3d00',userBubble:'#ffee00',aiBubble:'#fff57f',systemText:'#fff8b3',inputBackground:'#4d4d00',inputText:'#000'},
-  green:{background:'#001f00',chatBackground:'#0c3d0c',userBubble:'#00b33c',aiBubble:'#66ff99',systemText:'#aaffcc',inputBackground:'#004d1a',inputText:'#fff'},
-  teal:{background:'#001f1f',chatBackground:'#0c3d3d',userBubble:'#00b3b3',aiBubble:'#66ffff',systemText:'#99ffff',inputBackground:'#004d4d',inputText:'#fff'},
-  blue:{background:'#000f33',chatBackground:'#001a4d',userBubble:'#3385ff',aiBubble:'#80b3ff',systemText:'#99ccff',inputBackground:'#002b80',inputText:'#fff'},
-  purple:{background:'#1a0033',chatBackground:'#26004d',userBubble:'#9933ff',aiBubble:'#cc99ff',systemText:'#e6ccff',inputBackground:'#330066',inputText:'#fff'},
-  pink:{background:'#33001a',chatBackground:'#4d0026',userBubble:'#ff66b3',aiBubble:'#ffb3d9',systemText:'#ffccff',inputBackground:'#660033',inputText:'#fff'}
-};
-function getAllThemes(){ return {...baseThemes, ...colorThemes, ...customThemes}; }
-
-/* ---------- Theme Application ---------- */
-function applyTheme(name, overrideTheme){
-  const themes = getAllThemes();
-  const theme = overrideTheme || customThemes[name] || themes[name] || baseThemes.dark;
+function applyTheme(name){
+  const theme = baseThemes[name] || baseThemes.dark;
   currentTheme = name;
-  localStorage.setItem('theme', name);
+  localStorage.setItem("theme", name);
+
   document.body.style.background = theme.background;
-  document.body.style.color = theme.inputText || '#eee';
+  document.body.style.color = theme.inputText;
   if(chat) chat.style.background = theme.chatBackground;
-  if(promptEl){ promptEl.style.background = theme.inputBackground; promptEl.style.color = theme.inputText; }
-  document.querySelectorAll('.user').forEach(el => el.style.background = theme.userBubble);
-  document.querySelectorAll('.ai').forEach(el => el.style.background = theme.aiBubble);
-  document.querySelectorAll('.system').forEach(el => el.style.color = theme.systemText);
-  const typing = document.getElementById('typing');
-  if(typing) typing.style.background = theme.aiBubble;
+  if(promptEl){
+    promptEl.style.background = theme.inputBackground;
+    promptEl.style.color = theme.inputText;
+  }
+  document.querySelectorAll(".message.user").forEach(el=>el.style.background = theme.userBubble);
+  document.querySelectorAll(".message.ai").forEach(el=>el.style.background = theme.aiBubble);
+  document.querySelectorAll(".message.system").forEach(el=>el.style.color = theme.systemText);
 }
+applyTheme(currentTheme);
 
-/* ---------- Messages ---------- */
-function animateIn(el){
-  el.style.opacity = '0'; el.style.transform = 'translateY(10px)';
-  requestAnimationFrame(()=>{ el.style.transition='opacity .28s ease, transform .28s ease'; el.style.opacity='1'; el.style.transform='translateY(0)'; });
-}
-function smoothScrollToBottom(){ chat.scrollTo({ top: chat.scrollHeight, behavior:'smooth' }); }
+/* ---------- Message Handling ---------- */
+function smoothScroll(){ chat.scrollTo({top:chat.scrollHeight,behavior:"smooth"}); }
 
-function addMessage(sender, text, cls, options={save:true}){
-  const msg=document.createElement('div');
+function addMessage(sender,text,cls,opt={save:true}){
+  const msg=document.createElement("div");
   msg.className=`message ${cls}`;
-  msg.innerHTML=`<b>${sender}:</b> <span>${text}</span>`;
-  const theme=getAllThemes()[currentTheme]||baseThemes.dark;
-  if(cls==='user') msg.style.background=theme.userBubble;
-  if(cls==='ai') msg.style.background=theme.aiBubble;
-  if(cls==='system'){ msg.style.color=theme.systemText; msg.style.textAlign='left'; }
+  const timestamp=new Date().toLocaleTimeString();
+  msg.innerHTML=`<b>${sender}</b> <small style="opacity:.7">${timestamp}</small><br>${text}`;
   chat.appendChild(msg);
-  animateIn(msg);
-  smoothScrollToBottom();
-  if(options.save){ chatHistory.push({sender,text,cls}); localStorage.setItem('chatHistory',JSON.stringify(chatHistory)); }
+  smoothScroll();
+
+  if(opt.save){
+    chatHistory.push({sender,text,cls,time:timestamp});
+    localStorage.setItem("chatHistory",JSON.stringify(chatHistory));
+  }
 }
 
 /* ---------- Typing Indicator ---------- */
 function showTyping(){
-  if(document.getElementById('typing')) return;
-  const t=document.createElement('div'); t.id='typing'; t.className='message ai'; t.textContent='AI is typing...';
-  t.style.background=(getAllThemes()[currentTheme]||baseThemes.dark).aiBubble; chat.appendChild(t); smoothScrollToBottom();
+  if(document.getElementById("typing")) return;
+  const t=document.createElement("div");
+  t.id="typing"; t.className="message ai"; t.textContent="AI is typing...";
+  chat.appendChild(t); smoothScroll();
 }
-function hideTyping(){ const t=document.getElementById('typing'); if(t) t.remove(); }
+function hideTyping(){const t=document.getElementById("typing");if(t)t.remove();}
 
 /* ---------- Send Message ---------- */
 async function sendMessage(){
-  const text=(promptEl&&promptEl.value||'').trim();
+  const text=(promptEl.value||"").trim();
   if(!text) return;
-  addMessage('You',text,'user');
-  if(promptEl) promptEl.value='';
+  addMessage("You",text,"user");
+  promptEl.value="";
   showTyping();
   try{
     const res=await fetch(`/api?input=${encodeURIComponent(text)}&device=${deviceId}`);
     const reply=await res.text();
     hideTyping();
-    addMessage('AI',reply,'ai');
-  }catch(err){
+    addMessage("AI",reply,"ai");
+  }catch(e){
     hideTyping();
-    addMessage('System','Error contacting API.','system');
+    addMessage("System","Error contacting API.","system");
   }
 }
 
-/* ---------- Load Saved Chat ---------- */
-function loadSavedChatOnce(){
-  if(loadedSavedChat) return;
-  loadedSavedChat=true;
-  if(!chatHistory||!chatHistory.length) return;
-  chatHistory.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:false}));
-}
-loadSavedChatOnce();
+/* ---------- Load Old Messages ---------- */
+chatHistory.forEach(m=>addMessage(m.sender,m.text,m.cls,{save:false}));
 
-/* ---------- UI Actions ---------- */
-if(sendBtn) sendBtn.addEventListener('click', sendMessage);
-if(promptEl) promptEl.addEventListener('keydown', e=>{ if(e.key==='Enter') sendMessage(); });
-
-if(clearMemoryBtn) clearMemoryBtn.addEventListener('click', async ()=>{
-  if(!confirm('Clear local chat memory and server memory?')) return;
-  try{ await fetch(`/api?clear=true&device=${deviceId}`);}catch(e){}
-  chat.innerHTML=''; chatHistory=[]; localStorage.removeItem('chatHistory');
-  addMessage('System','Memory cleared!','system',{save:false});
+/* ---------- Clear Memory ---------- */
+if(clearMemoryBtn) clearMemoryBtn.addEventListener("click",async()=>{
+  if(!confirm("Clear memory?")) return;
+  try{await fetch(`/api?clear=true&device=${deviceId}`);}catch(e){}
+  chat.innerHTML=""; chatHistory=[]; localStorage.removeItem("chatHistory");
+  addMessage("System","Memory cleared!","system",{save:false});
 });
 
-/* ---------- History (enhanced) ---------- */
-if (historyBtn) {
-  historyBtn.addEventListener("click", async () => {
-    try {
-      const res = await fetch(`/api?view=history&device=${deviceId}`);
-      const data = await res.json();
-      let html = `<h3 style="text-align:center;">Chat History (from memory.json)</h3>`;
-      html += `<table style="width:100%;border-collapse:collapse;color:#eee;">
-        <tr><th style="border-bottom:1px solid #444;">Sender</th>
-            <th style="border-bottom:1px solid #444;">Class</th>
-            <th style="border-bottom:1px solid #444;">Text</th></tr>`;
-      data.forEach(m=>{
-        html += `<tr>
-          <td style="padding:4px;border-bottom:1px solid #333;">${m.sender}</td>
-          <td style="padding:4px;border-bottom:1px solid #333;">${m.cls||''}</td>
-          <td style="padding:4px;border-bottom:1px solid #333;">${m.text}</td>
-        </tr>`;
-      });
-      html += `</table>`;
-      const blob = new Blob([`<body style="background:#111;color:#eee;font-family:sans-serif;padding:10px;">${html}</body>`], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      historyFrame.src = url;
-      historyFrame.style.display = "block";
-      closeHistory.style.display = "block";
-    } catch (e) {
-      console.error(e);
-      alert("Failed to load memory.json data from server.");
-    }
+/* ---------- History View (with timestamps) ---------- */
+if(historyBtn) historyBtn.addEventListener("click",async()=>{
+  try{
+    const res=await fetch(`/api?view=history&device=${deviceId}`);
+    const data=await res.json();
+    let html=`<h3 style="text-align:center;">Device: ${deviceId}</h3>`;
+    html+=`<table style="width:100%;border-collapse:collapse;color:#eee;">
+      <tr><th>Sender</th><th>Class</th><th>Text</th><th>Time</th></tr>`;
+    data.forEach(m=>{
+      html+=`<tr>
+        <td style="border-bottom:1px solid #333;padding:4px;">${m.sender||""}</td>
+        <td style="border-bottom:1px solid #333;padding:4px;">${m.cls||""}</td>
+        <td style="border-bottom:1px solid #333;padding:4px;">${m.text||""}</td>
+        <td style="border-bottom:1px solid #333;padding:4px;">${m.time||""}</td>
+      </tr>`;
+    });
+    html+=`</table>`;
+    const blob=new Blob([`<body style='background:#111;color:#eee;font-family:sans-serif;padding:10px;'>${html}</body>`],{type:"text/html"});
+    const url=URL.createObjectURL(blob);
+    historyFrame.src=url;
+    historyFrame.style.display="block";
+    closeHistory.style.display="block";
+  }catch(e){
+    alert("Couldn't load server history.");
+  }
+});
+if(closeHistory) closeHistory.addEventListener("click",()=>{
+  historyFrame.style.display="none";
+  closeHistory.style.display="none";
+});
+
+/* ---------- Theme Selector ---------- */
+if(themeSelector){
+  Object.keys(baseThemes).forEach(name=>{
+    const opt=document.createElement("option");
+    opt.value=name; opt.textContent=name.charAt(0).toUpperCase()+name.slice(1);
+    themeSelector.appendChild(opt);
   });
+  themeSelector.value=currentTheme;
+  themeSelector.addEventListener("change",e=>applyTheme(e.target.value));
 }
 
-if (closeHistory)
-  closeHistory.addEventListener("click", () => {
-    historyFrame.style.display = "none";
-    closeHistory.style.display = "none";
-  });
-
-applyTheme(currentTheme);
+/* ---------- Send Button + Enter ---------- */
+if(sendBtn) sendBtn.addEventListener("click", sendMessage);
+if(promptEl) promptEl.addEventListener("keydown", e=>{if(e.key==="Enter")sendMessage();});
 </script>
 </body>
 </html>
