@@ -123,6 +123,30 @@ def api():
 
     return reply, 200
 
+@app.route("/history")
+def history_page():
+    try:
+        if not os.path.exists(MEMORY_FILE):
+            return "<p style='color:white'>No memory file found.</p>"
+
+        with open(MEMORY_FILE, "r") as f:
+            data = json.load(f)
+
+        html_output = "<html><head><title>Chat History</title></head>"
+        html_output += "<body style='background:#111;color:white;font-family:monospace;padding:10px;'>"
+        html_output += "<h2>Chat History</h2><hr>"
+
+        for entry in data:
+            sender = entry.get("sender", "Unknown")
+            text = entry.get("text", "").replace("\n", "<br>")
+            html_output += f"<p><b style='color:#6cf'>{sender}:</b> {text}</p>"
+
+        html_output += "</body></html>"
+        return html_output
+
+    except Exception as e:
+        return f"<p style='color:red'>Error loading history: {e}</p>"
+
 # ---------- MAIN ----------
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
