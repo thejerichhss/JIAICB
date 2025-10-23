@@ -534,6 +534,20 @@ if(importChatBtn && importChatFile){
     }
   }, 10);
 })();
+document.getElementById("historyBtn").addEventListener("click", () => {
+  const iframe = document.createElement("iframe");
+  iframe.src = "/history";
+  iframe.style.width = "100%";
+  iframe.style.height = "500px";
+  iframe.style.border = "2px solid #444";
+  iframe.style.borderRadius = "10px";
+  iframe.style.background = "#111";
+  iframe.style.marginTop = "10px";
+
+  // remove any previous iframe before adding a new one
+  document.querySelectorAll("iframe").forEach(i => i.remove());
+  document.body.appendChild(iframe);
+});
 </script>
 </body>
 </html>
