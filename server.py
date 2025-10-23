@@ -7,7 +7,7 @@ app = Flask(__name__, static_folder='.')
 
 # ---------- CONFIG ----------
 API_KEY = os.environ.get("JTAICB_API_KEY")  # Set this in Render environment
-MEMORY_FILE = "memory.json"
+MEMORY_FILE = "/data/memory.json"
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # ---------- MEMORY MANAGEMENT ----------
