@@ -82,9 +82,30 @@
     <button id="importChatBtn" style="background:#50fa7b;color:#111;">Import Chat</button>
     <input id="importChatFile" type="file" accept="application/json" style="display:none">
   </div>
-
-  <iframe id="historyFrame" title="Chat History"></iframe>
-  <button id="closeHistory">Close History</button>
+<!-- RIP Modal -->
+<div id="ripModal" class="rip-modal" style="display:none;">
+  <div class="rip-content">
+    <span id="closeRip" class="rip-close">&times;</span>
+    <div class="rip-tabs">
+      <button class="rip-tab" data-tab="logs"> System Logs</button>
+      <button class="rip-tab" data-tab="credits"> Credits</button>
+      <button class="rip-tab" data-tab="version"> Version Info</button>
+    </div>
+    <div id="ripBody" class="rip-body">
+      <div class="rip-section" id="logsSection"></div>
+      <div class="rip-section" id="creditsSection" style="display:none;">
+        <h3>Credits</h3>
+        <p> Created by <b>Jerich Finch</b></p>
+        <p> Powered by Flask + Render + Gemini API</p>
+        <p> Themed UI with full local & server memory sync</p>
+      </div>
+      <div class="rip-section" id="versionSection" style="display:none;">
+        <h3>Version Info</h3>
+        <p id="versionInfo">Loading version...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
   <!-- Custom Theme Modal -->
   <div id="customThemeModal" role="dialog" aria-hidden="true">
@@ -556,6 +577,102 @@ importThemeFile.onchange = async e => {
     importThemeFile.value = "";
   }
 };
+// ---------- RIP Modal System ----------
+const ripModal = document.getElementById('ripModal');
+const closeRip = document.getElementById('closeRip');
+const ripBody = document.getElementById('ripBody');
+const logsSection = document.getElementById('logsSection');
+const versionSection = document.getElementById('versionSection');
+const ripTabs = document.querySelectorAll('.rip-tab');
+
+// attach to RIP button (reusing historyBtn renamed to RIP if applicable)
+const ripBtn = document.getElementById('historyBtn'); // if renamed to RIP button
+if (ripBtn) {
+  ripBtn.textContent = 'RIP';
+  ripBtn.addEventListener('click', () => {
+    ripModal.style.display = 'block';
+    refreshLogs();
+    fetchVersion();
+  });
+}
+
+if (closeRip) closeRip.addEventListener('click', () => ripModal.style.display = 'none');
+window.addEventListener('click', e => { if (e.target === ripModal) ripModal.style.display = 'none'; });
+
+// handle tab switching
+ripTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    ripTabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.rip-section').forEach(sec => sec.style.display = 'none');
+    const id = btn.dataset.tab + 'Section';
+    document.getElementById(id).style.display = 'block';
+  });
+});
+ripTabs[0].classList.add('active');
+
+// system log tracker
+const systemLogs = [];
+function addSystemLog(entry) {
+  const time = new Date().toLocaleTimeString();
+  const msg = `[${time}] ${entry}`;
+  systemLogs.push(msg);
+  if (systemLogs.length > 50) systemLogs.shift();
+  if (logsSection) logsSection.innerHTML = systemLogs.map(l => `<div>${l}</div>`).join('');
+}
+
+// override fetch for logging
+const originalFetch = window.fetch;
+window.fetch = async (...args) => {
+  addSystemLog(`Fetch → ${args[0]}`);
+  try {
+    const res = await originalFetch(...args);
+    addSystemLog(`✅ Success: ${res.status} ${res.statusText}`);
+    return res;
+  } catch (err) {
+    addSystemLog(`❌ Error: ${err.message}`);
+    throw err;
+  }
+};
+
+// version info
+async function fetchVersion() {
+  try {
+    const res = await fetch('/api?version=true');
+    const text = await res.text();
+    document.getElementById('versionInfo').textContent = text || 'Unknown version';
+  } catch {
+    document.getElementById('versionInfo').textContent = 'Unable to fetch version info.';
+  }
+}
+function refreshLogs() {
+  if (logsSection) logsSection.innerHTML = systemLogs.map(l => `<div>${l}</div>`).join('');
+}
+
+// theme integration
+function applyRipTheme() {
+  const theme = getAllThemes()[currentTheme] || baseThemes.dark;
+  const content = document.querySelector('.rip-content');
+  if (content) {
+    content.style.background = theme.chatBackground;
+    content.style.color = theme.inputText;
+  }
+  document.querySelectorAll('.rip-tab').forEach(btn => {
+    btn.style.background = theme.userBubble;
+    btn.style.color = theme.inputText;
+    btn.style.border = 'none';
+    btn.style.borderRadius = '6px';
+    btn.style.padding = '.4rem .8rem';
+    btn.style.margin = '0 .2rem';
+  });
+  document.querySelectorAll('.rip-section').forEach(sec => {
+    sec.style.background = theme.background;
+    sec.style.padding = '.5rem';
+    sec.style.borderRadius = '8px';
+    sec.style.marginTop = '.5rem';
+  });
+}
+applyRipTheme();
 </script>
 </body>
 </html>
