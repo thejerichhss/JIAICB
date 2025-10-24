@@ -22,7 +22,7 @@
   button { padding:.45rem .8rem; border-radius:6px; border:none; background:#6272a4; color:#fff; cursor:pointer; transition: background .2s; }
   button:hover { filter:brightness(1.05); }
   #clearMemory { background:#d9534f; }
-  #historyBtn { background:#ffee8c; color:#111; }
+  #historyBtn { background:#898989; color:white; }
   #modsbtn { background:#50fa7b; color:#111; }
   #searchBar { padding:.45rem; margin:.4rem; width:60%; border-radius:6px; border:1px solid #444; background:#222; color:#fff; }
 
@@ -77,7 +77,7 @@
     <input id="prompt" type="text" placeholder="Type your message..." autocomplete="off" />
     <button id="sendBtn">Send</button>
     <button id="clearMemory">Clear Memory</button>
-    <button id="historyBtn">History</button>
+    <button id="historybtn">RIP</button>
     <button id="exportChatBtn" style="background:#00bfff;color:#fff;">Export Chat</button>
     <button id="importChatBtn" style="background:#50fa7b;color:#111;">Import Chat</button>
     <input id="importChatFile" type="file" accept="application/json" style="display:none">
@@ -356,38 +356,6 @@ importChatFile.onchange = async e => {
     addMessage("System", "Failed to import chat: invalid file.", "system", false);
   } finally {
     importChatFile.value = "";
-  }
-};
-
-/* ---------- History (iframe) ---------- */
-historyBtn.onclick = async () => {
-  try {
-    // ask backend for canonical history, fallback to local chatHistory
-    let data = chatHistory;
-    try {
-      const res = await fetch(`/api?view=history&device=${deviceId}`);
-      if (res.ok) {
-        const d = await res.json();
-        if (Array.isArray(d)) data = d;
-      }
-    } catch (e) {}
-    const html = `<body style='background:#111;color:#eee;font-family:monospace;padding:10px;'>${
-      data.map(m => `<p><b>${m.sender}:</b> ${escapeHtml(m.text)}</p>`).join("")
-    }</body>`;
-    const blob = new Blob([html], { type: "text/html" });
-    historyFrame.src = URL.createObjectURL(blob);
-    historyFrame.style.display = "block";
-    closeHistory.style.display = "block";
-  } catch (err) {
-    addMessage("System", "Failed to open history.", "system", false);
-  }
-};
-closeHistory.onclick = () => {
-  historyFrame.style.display = "none";
-  closeHistory.style.display = "none";
-  if (historyFrame.src) {
-    URL.revokeObjectURL(historyFrame.src);
-    historyFrame.src = "";
   }
 };
 
