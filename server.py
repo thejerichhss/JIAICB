@@ -170,10 +170,30 @@ def api():
     if not API_KEY:
         reply = "Error: Missing Gemini API key."
     else:
+        # Build Gemini payload from stored memory so the model sees conversation history
+        with memory_lock:
+            history = app.memory.get(device_id, []).copy()
+
+        # Limit history length by entries (adjust as needed)
+        MAX_HISTORY_ENTRIES = 60
+        recent = history[-MAX_HISTORY_ENTRIES:]
+
+        contents = []
+        for entry in recent:
+            sender = entry.get("sender", "")
+            role = "user" if sender == "You" else "assistant"
+            text = entry.get("text", "") or ""
+            # Skip empty messages
+            if not text:
+                continue
+            contents.append({"role": role, "parts": [{"text": text}]})
+
+        # Ensure at least the current user input is present
+        if not contents or contents[-1].get("role") != "user":
+            contents.append({"role": "user", "parts": [{"text": user_input}]})
+
         payload = {
-            "contents": [
-                {"role": "user", "parts": [{"text": user_input}]}
-            ],
+            "contents": contents,
             "generationConfig": {
                 "temperature": 0.7,
                 "maxOutputTokens": 500
