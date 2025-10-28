@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<title>JIAICB (V0.77)</title>
+<title>JIAICB (V0.78)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <style>
   :root { --transition: 0.35s ease; }
   body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display:flex; flex-direction:column; height:100vh; transition: background var(--transition), color var(--transition); }
@@ -11,6 +15,13 @@
   #chat { flex: 1; padding: 1rem; overflow-y: auto; background: #222; border-top:1px solid #333; border-bottom: 1px solid #333; transition: background var(--transition); }
   .message { display:block; padding:.5rem .8rem; border-radius:14px; margin:.35rem 0; max-width:72%; word-wrap:break-word; position:relative; opacity:0; transform:translateY(10px); transition: opacity .28s ease, transform .28s ease; }
   .message.show { opacity:1; transform:translateY(0); }
+  /* Markdown CSS */
+  /* markdown / code block styling */
+  .messageText pre { background:#0b0b0b; padding:.6rem; border-radius:6px; overflow:auto; }
+  .messageText code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; font-size:0.93em; }
+  .message.ai .messageText pre { background: rgba(0,0,0,0.06); }
+  .message.user .messageText pre { background: rgba(255,255,255,0.03); }
+  .messageText a { color: inherit; text-decoration: underline; }
   .user { margin-left:auto; background:#6272a4; color:#fff; text-align:left; }
   .ai { margin-right:auto; background:#50fa7b; color:#111; text-align:left; }
   .system { font-style:italic; color:#ff5555; text-align:left; }
@@ -139,6 +150,11 @@
     </div>
   </div>
 <script>
+// configure marked (GFM, line breaks)
+marked.setOptions({
+  gfm: true,
+  breaks: true
+});
 /* ---------- Setup ---------- */
 if (!localStorage.getItem("deviceId"))
   localStorage.setItem("deviceId", crypto.randomUUID());
@@ -220,10 +236,24 @@ function renderMessageElement(sender, text, cls, time) {
   header.innerHTML = `<b>${escapeHtml(sender)}</b> <small>${time}</small>`;
   const body = document.createElement("div");
   body.className = "messageText";
-  body.textContent = text;
+
+  // convert Markdown -> HTML and sanitize (requires marked + DOMPurify loaded)
+  const rawHtml = marked.parse(text || "");
+  body.innerHTML = DOMPurify.sanitize(rawHtml);
+
   msg.appendChild(header);
   msg.appendChild(body);
   chat.appendChild(msg);
+  // make links open in a new tab and avoid opener leaks
+  body.querySelectorAll('a').forEach(a => {
+  a.setAttribute('target', '_blank');
+  a.setAttribute('rel', 'noopener noreferrer');
+});
+  // highlight code blocks inside this message (requires highlight.js loaded)
+  body.querySelectorAll('pre code').forEach((block) => {
+    try { hljs.highlightElement(block); } catch (e) { /* ignore */ }
+});
+
   void msg.offsetWidth;
   msg.classList.add("show");
   return msg;
