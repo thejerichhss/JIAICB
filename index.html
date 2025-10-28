@@ -9,7 +9,7 @@
   body { font-family: sans-serif; background: #111; color: #eee; margin: 0; display:flex; flex-direction:column; height:100vh; transition: background var(--transition), color var(--transition); }
   #topbar { display:flex; align-items:center; gap:0.5rem; padding:0.5rem; background:transparent; }
   #chat { flex: 1; padding: 1rem; overflow-y: auto; background: #222; border-top:1px solid #333; border-bottom: 1px solid #333; transition: background var(--transition); }
-  .message { display:block; padding:.5rem .8rem; border-radius:14px; margin:.35rem 0; max-width:72%; word-wrap:break-word; position:relative; opacity:0; transform:translateY(10px); transition: opacity[...]
+  .message { display:block; padding:.5rem .8rem; border-radius:14px; margin:.35rem 0; max-width:72%; word-wrap:break-word; position:relative; opacity:0; transform:translateY(10px); transition: opacity .28s ease, transform .28s ease; }
   .message.show { opacity:1; transform:translateY(0); }
   .user { margin-left:auto; background:#6272a4; color:#fff; text-align:left; }
   .ai { margin-right:auto; background:#50fa7b; color:#111; text-align:left; }
@@ -27,7 +27,7 @@
   #searchBar { padding:.45rem; margin:.4rem; width:60%; border-radius:6px; border:1px solid #444; background:#222; color:#fff; }
 
   /* modal */
-  #customThemeModal { display:none; position:fixed; z-index:12000; top:50%; left:50%; transform:translate(-50%,-50%); width:360px; max-width:95%; background:#111; border:2px solid #50fa7b; border-radi[...]
+  #customThemeModal { display:none; position:fixed; z-index:12000; top:50%; left:50%; transform:translate(-50%,-50%); width:360px; max-width:95%; background:#111; border:2px solid #50fa7b; border-radius:12px; padding:1rem; box-shadow:0 6px 30px rgba(0,0,0,.6); }
   #customThemeModal[aria-hidden="false"] { display:block; }
   #customThemeModal h3 { margin:0 0 .5rem 0; text-align:center; }
   #customThemeModal label{display:block;margin-top:.35rem;font-size:.9rem}
@@ -149,7 +149,7 @@ const chat = document.getElementById("chat");
 const promptEl = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
 const clearBtn = document.getElementById("clearMemory");
-const historyBtn = document.getElementById("historyBtn");
+const ripBtn = document.getElementById("ripBtn");
 const themeMenu = document.getElementById("themeSelector");
 const modsbtn = document.getElementById("modsbtn");
 const historyFrame = document.getElementById("historyFrame");
@@ -587,8 +587,9 @@ const versionSection = document.getElementById('versionSection');
 const ripTabs = document.querySelectorAll('.rip-tab');
 
 // attach to RIP button (reusing historyBtn renamed to RIP if applicable)
-const ripBtn = document.getElementById('ripBtn'); // hook up the actual RIP button
+const ripBtn = document.getElementById('historyBtn'); // if renamed to RIP button
 if (ripBtn) {
+  ripBtn.textContent = 'RIP';
   ripBtn.addEventListener('click', () => {
     ripModal.style.display = 'block';
     refreshLogs();
@@ -609,7 +610,7 @@ ripTabs.forEach(btn => {
     document.getElementById(id).style.display = 'block';
   });
 });
-if (ripTabs.length) ripTabs[0].classList.add('active');
+ripTabs[0].classList.add('active');
 
 // system log tracker
 const systemLogs = [];
@@ -649,24 +650,24 @@ function refreshLogs() {
   if (logsSection) logsSection.innerHTML = systemLogs.map(l => `<div>${l}</div>`).join('');
 }
 
-// theme integration for RIP modal (safe use of existing themes)
+// theme integration
 function applyRipTheme() {
-  const t = themes[currentTheme] || themes.dark;
+  const theme = getAllThemes()[currentTheme] || baseThemes.dark;
   const content = document.querySelector('.rip-content');
   if (content) {
-    content.style.background = t.chat;
-    content.style.color = t.text;
+    content.style.background = theme.chatBackground;
+    content.style.color = theme.inputText;
   }
   document.querySelectorAll('.rip-tab').forEach(btn => {
-    btn.style.background = t.user;
-    btn.style.color = t.text;
+    btn.style.background = theme.userBubble;
+    btn.style.color = theme.inputText;
     btn.style.border = 'none';
     btn.style.borderRadius = '6px';
     btn.style.padding = '.4rem .8rem';
     btn.style.margin = '0 .2rem';
   });
   document.querySelectorAll('.rip-section').forEach(sec => {
-    sec.style.background = t.bg;
+    sec.style.background = theme.background;
     sec.style.padding = '.5rem';
     sec.style.borderRadius = '8px';
     sec.style.marginTop = '.5rem';
