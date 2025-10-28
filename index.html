@@ -253,6 +253,71 @@
     background: #ff5555;
     color: #fff;
   }
+  /* RIP Modal Styling */
+.rip-modal {
+  position: fixed;
+  z-index: 12000;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rip-content {
+  background: #111;
+  border: 2px solid #50fa7b;
+  border-radius: 12px;
+  padding: 1rem;
+  width: 90%;
+  max-width: 700px;
+  box-shadow: 0 6px 30px rgba(0,0,0,.6);
+  color: #eee;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.rip-close {
+  float: right;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #ff5555;
+}
+
+.rip-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.rip-tab {
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.rip-tab.active,
+.rip-tab:hover {
+  background: #50fa7b;
+  color: #111;
+}
+
+.rip-section {
+  text-align: left;
+  margin-top: .5rem;
+}
 
   /* Responsive */
   @media (max-width:600px){
@@ -320,6 +385,15 @@
       <div class="rip-section" id="versionSection" style="display:none;">
         <h3>Version Info</h3>
         <p id="versionInfo">v0.77</p>
+      <button id="viewHistoryBtn" style="margin-top:10px;">View Server History</button>
+
+    <div id="historyContainer" style="margin-top:15px;display:none;">
+      <iframe 
+        id="historyFrame"
+        src="https://jiaicb.onrender.com/history/"
+        style="width:100%;height:60vh;border:none;border-radius:10px;background:#000;">
+      </iframe>
+    </div>
       </div>
     </div>
   </div>
@@ -622,6 +696,22 @@ ripTabs.forEach(tab => {
     creditsSection.style.display = name === "credits" ? "block" : "none";
     versionSection.style.display = name === "version" ? "block" : "none";
   };
+});
+const viewHistoryBtn = document.getElementById("viewHistoryBtn");
+const historyContainer = document.getElementById("historyContainer");
+
+viewHistoryBtn.addEventListener("click", () => {
+  if (historyContainer.style.display === "none") {
+    historyContainer.style.display = "block";
+    viewHistoryBtn.textContent = "Hide Server History";
+  } else {
+    historyContainer.style.display = "none";
+    viewHistoryBtn.textContent = "View Server History";
+  }
+});
+// Close when clicking outside modal content
+window.addEventListener("click", e => {
+  if (e.target === ripModal) ripModal.style.display = "none";
 });
 
 // -------------------- Export / Import Chat --------------------
