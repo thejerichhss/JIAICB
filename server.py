@@ -10,8 +10,8 @@ import html as html_escape
 app = Flask(__name__, static_folder='.')
 
 # ---------- CONFIG ----------
+VERSION = "v0.77"
 API_KEY = os.environ.get("JTAICB_API_KEY")  # Set this in Render environment
-# Allow overriding MEMORY_FILE via env var; default to ./data/memory.json for local/dev
 MEMORY_FILE = os.environ.get("JTAICB_MEMORY_FILE", "./data/memory.json")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
@@ -42,7 +42,7 @@ def load_memory():
         return {}
 
 def _write_memory_file(data):
-    """Write memory JSON to disk without acquiring locks (caller should hold any lock)."""
+    """Write memory JSON to disk safely."""
     try:
         _ensure_memory_dir()
         dirpath = os.path.dirname(MEMORY_FILE) or "."
@@ -65,15 +65,7 @@ def save_memory():
 app.memory = load_memory()
 logger.info("Loaded memory for %d devices (from %s)", len(app.memory), MEMORY_FILE)
 
-# ---------- ROUTES ----------
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/<path:path>')
-def static_files(path):
-    return send_from_directory('.', path)
-
+# ---------- HELPER FUNCTIONS ----------
 def _get_device_id(req):
     # Priority: query string -> JSON body -> header -> fallback 'unknown'
     device = req.args.get('device')
@@ -90,37 +82,45 @@ def _get_device_id(req):
 def _extract_text_from_gemini_response(data):
     """Try several response shapes to extract generated text."""
     try:
-        # Old shape: candidates -> content -> parts -> text
         candidates = data.get("candidates")
         if candidates and isinstance(candidates, list):
             parts = candidates[0].get("content", {}).get("parts", [])
             return "".join(p.get("text", "") for p in parts).strip()
 
-        # Possible shape: output as list/dict with 'content' or 'text'
         output = data.get("output")
         if output:
             if isinstance(output, list):
                 texts = []
                 for item in output:
-                    # try several nested keys
                     if isinstance(item, dict):
                         texts.append(item.get("content", {}).get("text", "") or item.get("text", "") or "")
                 return "\n".join(t for t in texts if t).strip()
             elif isinstance(output, dict):
                 return output.get("content", {}).get("text", "") or output.get("text", "") or ""
 
-        # Other possible keys
         if "responses" in data and isinstance(data["responses"], list):
             return " ".join(r.get("text", "") for r in data["responses"]).strip()
 
-        # Fallback to stringifying the data
         return ""
     except Exception as e:
         logger.exception("Failed to extract text from Gemini response: %s", e)
         return ""
 
+# ---------- ROUTES ----------
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/<path:path>')
+def static_files(path):
+    return send_from_directory('.', path)
+
 @app.route('/api', methods=['GET', 'POST'])
 def api():
+    # 🔹 Version endpoint (for frontend fetchVersion)
+    if request.args.get("version"):
+        return VERSION, 200
+
     device_id = _get_device_id(request)
     clear = request.args.get('clear', 'false').lower() == 'true'
     view = request.args.get('view', None)
@@ -129,14 +129,12 @@ def api():
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
 
-        # Import full memory from frontend
         if "memory" in data and isinstance(data["memory"], list):
             with memory_lock:
                 app.memory[device_id] = data["memory"]
                 _write_memory_file(app.memory)
             return "Memory imported successfully!", 200
 
-        # Regular chat input via POST
         user_input = (data.get("input") or "").strip()
     else:
         user_input = (request.args.get("input") or "").strip()
@@ -148,7 +146,7 @@ def api():
             _write_memory_file(app.memory)
         return "Memory cleared!", 200
 
-    # View chat history
+    # View history
     if view == "history":
         return jsonify(app.memory.get(device_id, []))
 
@@ -156,13 +154,11 @@ def api():
     if not user_input:
         return "No input", 400
 
-    # Add user message (thread-safe)
+    # Add user message
     with memory_lock:
         app.memory.setdefault(device_id, []).append({"sender": "You", "text": user_input})
-        # Keep memory from getting huge (optional cap)
         if len(app.memory[device_id]) > 200:
             app.memory[device_id] = app.memory[device_id][-200:]
-        # Save after adding user message
         _write_memory_file(app.memory)
 
     # ---------- GEMINI API ----------
@@ -170,11 +166,9 @@ def api():
     if not API_KEY:
         reply = "Error: Missing Gemini API key."
     else:
-        # Build Gemini payload from stored memory so the model sees conversation history
         with memory_lock:
             history = app.memory.get(device_id, []).copy()
 
-        # Limit history length by entries (adjust as needed)
         MAX_HISTORY_ENTRIES = 60
         recent = history[-MAX_HISTORY_ENTRIES:]
 
@@ -183,12 +177,10 @@ def api():
             sender = entry.get("sender", "")
             role = "user" if sender == "You" else "assistant"
             text = entry.get("text", "") or ""
-            # Skip empty messages
             if not text:
                 continue
             contents.append({"role": role, "parts": [{"text": text}]})
 
-        # Ensure at least the current user input is present
         if not contents or contents[-1].get("role") != "user":
             contents.append({"role": "user", "parts": [{"text": user_input}]})
 
@@ -203,8 +195,6 @@ def api():
         headers = {"Content-Type": "application/json"}
         params = {}
 
-        # If user provided a Bearer token (e.g., "Bearer X..."), put it in Authorization header.
-        # Otherwise, default to key-based param (some Google APIs accept ?key=).
         if API_KEY.lower().startswith("bearer "):
             headers["Authorization"] = API_KEY
         else:
@@ -219,41 +209,32 @@ def api():
                 timeout=25
             )
 
-            # Check status
             try:
                 resp.raise_for_status()
             except requests.HTTPError:
                 logger.error("Gemini API returned status %s: %s", resp.status_code, resp.text)
                 reply = f"Error contacting Gemini: status {resp.status_code}"
             else:
-                # parse JSON safely
                 try:
                     data = resp.json()
                 except Exception as e:
                     logger.exception("Failed to parse Gemini JSON response: %s", e)
                     reply = f"Error parsing Gemini response: {e}"
                 else:
-                    # extract text from a few possible shapes
                     extracted = _extract_text_from_gemini_response(data)
                     if extracted:
                         reply = extracted
                     else:
-                        # if nothing matched, try some common single keys
-                        if isinstance(data, dict):
-                            reply = data.get("text") or data.get("message") or "No reply"
-                        else:
-                            reply = "No reply"
-
+                        reply = data.get("text") or data.get("message") or "No reply"
         except requests.RequestException as e:
             logger.exception("Error during Gemini request: %s", e)
             reply = f"Error contacting Gemini: {e}"
 
-    # Add AI reply to memory (thread-safe) and persist
+    # Save AI reply
     with memory_lock:
         app.memory.setdefault(device_id, []).append({"sender": "AI", "text": reply})
         _write_memory_file(app.memory)
 
-    # Preserve original behavior: return plain text reply for frontend compatibility
     return reply, 200
 
 @app.route("/history")
@@ -271,7 +252,6 @@ def history_page():
         <h2>Chat History</h2><hr>
         """
 
-        # Loop through each device’s chat
         for device, entries in all_data.items():
             html_output += f"<h3 style='color:#9cf'>Device: {html_escape.escape(str(device))}</h3><hr>"
             for entry in entries:
@@ -282,7 +262,6 @@ def history_page():
 
         html_output += "</body></html>"
         return html_output
-
     except Exception as e:
         logger.exception("Error loading history: %s", e)
         return f"<p style='color:red'>Error loading history: {e}</p>"
