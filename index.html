@@ -375,7 +375,15 @@
       <button class="rip-tab" data-tab="version"> Version Info</button>
     </div>
     <div id="ripBody" class="rip-body">
-      <div class="rip-section" id="logsSection"></div>
+      <div class="rip-section" id="logsSection">
+        <div id="historyContainer" style="margin-top:15px;display:none;">
+      <iframe 
+        id="historyFrame"
+        src="https://jiaicb.onrender.com/history/"
+        style="width:100%;height:60vh;border:none;border-radius:10px;background:#000;">
+       </iframe>
+       </div>
+      </div>
       <div class="rip-section" id="creditsSection" style="display:none;">
         <h3>Credits</h3>
         <p> Created by <b>Jerich Finch</b></p>
@@ -386,14 +394,6 @@
         <h3>Version Info</h3>
         <p id="versionInfo">v0.77</p>
       <button id="viewHistoryBtn" style="margin-top:10px;">View Server History</button>
-
-    <div id="historyContainer" style="margin-top:15px;display:none;">
-      <iframe 
-        id="historyFrame"
-        src="https://jiaicb.onrender.com/history/"
-        style="width:100%;height:60vh;border:none;border-radius:10px;background:#000;">
-      </iframe>
-    </div>
       </div>
     </div>
   </div>
