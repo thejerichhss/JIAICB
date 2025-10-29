@@ -90,6 +90,32 @@
     transition: background var(--transition);
   }
 
+  /* --- Copy button styling --- */
+.copy-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(80, 250, 123, 0.15);
+  border: 1px solid #50fa7b;
+  color: #50fa7b;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.messageText pre {
+  position: relative;
+}
+.messageText pre:hover .copy-btn {
+  opacity: 1;
+}
+.copy-btn.copied {
+  background: #50fa7b;
+  color: #111;
+}
+
   /* Markdown & code block styling */
   .messageText pre {
     background: #0b0b0b;
@@ -516,6 +542,28 @@ function renderMessageElement(sender, text, cls, time) {
   chat.appendChild(msg);
   body.querySelectorAll("a").forEach(a => { a.target = "_blank"; a.rel = "noopener noreferrer"; });
   body.querySelectorAll("pre code").forEach(b => { try { hljs.highlightElement(b); } catch {} });
+  // Add "Copy" buttons to code blocks
+body.querySelectorAll("pre").forEach(pre => {
+  const btn = document.createElement("button");
+  btn.className = "copy-btn";
+  btn.textContent = "Copy";
+  btn.onclick = () => {
+    const code = pre.querySelector("code");
+    navigator.clipboard.writeText(code.innerText)
+      .then(() => {
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = "Copy";
+          btn.classList.remove("copied");
+        }, 1500);
+      })
+      .catch(() => {
+        btn.textContent = "Error";
+      });
+  };
+  pre.appendChild(btn);
+});
   requestAnimationFrame(() => msg.classList.add("show"));
   return msg;
 }
