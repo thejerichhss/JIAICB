@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: jiaicb
+    name: jtaicb
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn server:app
