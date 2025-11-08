@@ -61,7 +61,6 @@ app.memory = load_memory()
 logger.info("Loaded memory for %d devices (from %s)", len(app.memory), MEMORY_FILE)
 
 def _get_device_id(req):
-    # Priority: query string -> JSON body -> header -> fallback 'unknown'
     device = req.args.get('device')
     if not device:
         try:
@@ -110,7 +109,6 @@ def static_files(path):
 
 @app.route('/api', methods=['GET', 'POST'])
 def api():
-    
     if request.args.get("version"):
         return VERSION, 200
 
@@ -118,7 +116,6 @@ def api():
     clear = request.args.get('clear', 'false').lower() == 'true'
     view = request.args.get('view', None)
 
-    # Handle memory import via POST JSON
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
 
