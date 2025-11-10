@@ -1,0 +1,6 @@
+JIAICB
+Jerich’s Internet Artificial Intelligence Chat Bot is a Full-Stack Render Web App that interacts with Gemini API to make an AI Chatbot. It works by using server.py which uses flask and gunicorn to interact with Gemini API, next, it cleans the raw javascript response from the AI to only show the text, then it sends the cleaned AI response to index.html, that’s where the fancy magic happens. In index.html, there are many key features, such as,
+Themes - There are many options, such as Dark, Light, Sunset, and every color. There’s also a custom themes modal (menu), that allows the user to make custom themes, save them, and import or export them.
+Chats - On JIAICB, in order to save space, I decided to make the Import and Export Chat buttons, don’t worry, your conversation is stored in memory, but if you want to make a new one, just download your old chat, clear the memory, and start a new conversation!
+Markdown Support - Yes, you read that right, JIAICB has MD Support! Now you don’t see those annoying symbols in your text, it actually changes it to it’s MD counterpart! (bold, italic, crossed out etc.)
+(There is also the shift+enter key bind to make a newline without sending the whole text, plus the RIP modal that shows the version, credits, and system logs.)
