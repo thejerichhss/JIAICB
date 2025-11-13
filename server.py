@@ -10,7 +10,7 @@ import html as html_escape
 app = Flask(__name__, static_folder='.')
 
 VERSION = "v0.78"
-API_KEY = os.environ.get("JTAICB_API_KEY")  # Set this in Render environment
+API_KEY = os.environ.get("JTAICB_API_KEY")
 MEMORY_FILE = os.environ.get("JTAICB_MEMORY_FILE", "./data/memory.json")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
@@ -38,7 +38,6 @@ def load_memory():
         return {}
 
 def _write_memory_file(data):
-    """Write memory JSON to disk safely."""
     try:
         _ensure_memory_dir()
         dirpath = os.path.dirname(MEMORY_FILE) or "."
@@ -53,7 +52,6 @@ def _write_memory_file(data):
         return False
 
 def save_memory():
-    """Acquire the memory lock, then write memory to disk."""
     with memory_lock:
         return _write_memory_file(app.memory)
 
@@ -61,7 +59,6 @@ app.memory = load_memory()
 logger.info("Loaded memory for %d devices (from %s)", len(app.memory), MEMORY_FILE)
 
 def _get_device_id(req):
-    # Priority: query string -> JSON body -> header -> fallback 'unknown'
     device = req.args.get('device')
     if not device:
         try:
@@ -74,13 +71,11 @@ def _get_device_id(req):
     return device or 'unknown'
 
 def _extract_text_from_gemini_response(data):
-    """Try several response shapes to extract generated text."""
     try:
         candidates = data.get("candidates")
         if candidates and isinstance(candidates, list):
             parts = candidates[0].get("content", {}).get("parts", [])
             return "".join(p.get("text", "") for p in parts).strip()
-
         output = data.get("output")
         if output:
             if isinstance(output, list):
@@ -91,10 +86,8 @@ def _extract_text_from_gemini_response(data):
                 return "\n".join(t for t in texts if t).strip()
             elif isinstance(output, dict):
                 return output.get("content", {}).get("text", "") or output.get("text", "") or ""
-
         if "responses" in data and isinstance(data["responses"], list):
             return " ".join(r.get("text", "") for r in data["responses"]).strip()
-
         return ""
     except Exception as e:
         logger.exception("Failed to extract text from Gemini response: %s", e)
@@ -110,7 +103,6 @@ def static_files(path):
 
 @app.route('/api', methods=['GET', 'POST'])
 def api():
-    
     if request.args.get("version"):
         return VERSION, 200
 
@@ -118,16 +110,13 @@ def api():
     clear = request.args.get('clear', 'false').lower() == 'true'
     view = request.args.get('view', None)
 
-    # Handle memory import via POST JSON
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
-
         if "memory" in data and isinstance(data["memory"], list):
             with memory_lock:
                 app.memory[device_id] = data["memory"]
                 _write_memory_file(app.memory)
             return "Memory imported successfully!", 200
-
         user_input = (data.get("input") or "").strip()
     else:
         user_input = (request.args.get("input") or "").strip()
@@ -156,10 +145,8 @@ def api():
     else:
         with memory_lock:
             history = app.memory.get(device_id, []).copy()
-
         MAX_HISTORY_ENTRIES = 60
         recent = history[-MAX_HISTORY_ENTRIES:]
-
         contents = []
         for entry in recent:
             sender = entry.get("sender", "")
@@ -168,10 +155,8 @@ def api():
             if not text:
                 continue
             contents.append({"role": role, "parts": [{"text": text}]})
-
         if not contents or contents[-1].get("role") != "user":
             contents.append({"role": "user", "parts": [{"text": user_input}]})
-
         payload = {
             "contents": contents,
             "generationConfig": {
@@ -179,24 +164,14 @@ def api():
                 "maxOutputTokens": 500
             }
         }
-
         headers = {"Content-Type": "application/json"}
         params = {}
-
         if API_KEY.lower().startswith("bearer "):
             headers["Authorization"] = API_KEY
         else:
             params["key"] = API_KEY
-
         try:
-            resp = requests.post(
-                GEMINI_URL,
-                headers=headers,
-                params=params,
-                json=payload,
-                timeout=25
-            )
-
+            resp = requests.post(GEMINI_URL, headers=headers, params=params, json=payload, timeout=25)
             try:
                 resp.raise_for_status()
             except requests.HTTPError:
@@ -226,19 +201,23 @@ def api():
 
 @app.route("/history")
 def history_page():
+    password = os.environ.get("HISTORY_PASSWORD", "")
+    provided = request.args.get("password", "")
+    if password and provided != password:
+        return (
+            "<p style='color:red;font-family:monospace'>Unauthorized: missing or incorrect password.</p>",
+            401
+        )
     try:
         if not os.path.exists(MEMORY_FILE):
             return "<p style='color:white'>No memory file found.</p>"
-
         with open(MEMORY_FILE, "r", encoding="utf-8") as f:
             all_data = json.load(f)
-
         html_output = """
         <html><head><title>Chat History</title></head>
         <body style='background:#111;color:white;font-family:monospace;padding:10px;'>
         <h2>Chat History</h2><hr>
         """
-
         for device, entries in all_data.items():
             html_output += f"<h3 style='color:#9cf'>Device: {html_escape.escape(str(device))}</h3><hr>"
             for entry in entries:
@@ -246,7 +225,6 @@ def history_page():
                 text = html_escape.escape(entry.get("text", "")).replace("\n", "<br>")
                 html_output += f"<p><b style='color:#6cf'>{sender}:</b> {text}</p>"
             html_output += "<hr>"
-
         html_output += "</body></html>"
         return html_output
     except Exception as e:
