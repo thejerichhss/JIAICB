@@ -9,14 +9,17 @@ import html as html_escape
 
 app = Flask(__name__, static_folder='.')
 
+# ---------- CONFIG ----------
 VERSION = "v0.78"
-API_KEY = os.environ.get("JTAICB_API_KEY")
+API_KEY = os.environ.get("JTAICB_API_KEY")  # Set this in Render environment
 MEMORY_FILE = os.environ.get("JTAICB_MEMORY_FILE", "./data/memory.json")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
+# ---------- LOGGING ----------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ---------- THREADING / LOCKS ----------
 memory_lock = threading.Lock()
 
 def _ensure_memory_dir():
@@ -27,6 +30,7 @@ def _ensure_memory_dir():
         except Exception as e:
             logger.error("Failed to create memory directory '%s': %s", directory, e)
 
+# ---------- MEMORY MANAGEMENT ----------
 def load_memory():
     try:
         if os.path.exists(MEMORY_FILE):
@@ -57,10 +61,13 @@ def save_memory():
     with memory_lock:
         return _write_memory_file(app.memory)
 
+# Load memory once at startup
 app.memory = load_memory()
 logger.info("Loaded memory for %d devices (from %s)", len(app.memory), MEMORY_FILE)
 
+# ---------- HELPER FUNCTIONS ----------
 def _get_device_id(req):
+    # Priority: query string -> JSON body -> header -> fallback 'unknown'
     device = req.args.get('device')
     if not device:
         try:
@@ -99,6 +106,7 @@ def _extract_text_from_gemini_response(data):
         logger.exception("Failed to extract text from Gemini response: %s", e)
         return ""
 
+# ---------- ROUTES ----------
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -109,6 +117,7 @@ def static_files(path):
 
 @app.route('/api', methods=['GET', 'POST'])
 def api():
+    # 🔹 Version endpoint (for frontend fetchVersion)
     if request.args.get("version"):
         return VERSION, 200
 
@@ -116,6 +125,7 @@ def api():
     clear = request.args.get('clear', 'false').lower() == 'true'
     view = request.args.get('view', None)
 
+    # Handle memory import via POST JSON
     if request.method == 'POST':
         data = request.get_json(silent=True) or {}
 
@@ -129,24 +139,29 @@ def api():
     else:
         user_input = (request.args.get("input") or "").strip()
 
+    # Clear memory
     if clear:
         with memory_lock:
             app.memory[device_id] = []
             _write_memory_file(app.memory)
         return "Memory cleared!", 200
 
+    # View history
     if view == "history":
         return jsonify(app.memory.get(device_id, []))
 
+    # Handle no input
     if not user_input:
         return "No input", 400
 
+    # Add user message
     with memory_lock:
         app.memory.setdefault(device_id, []).append({"sender": "You", "text": user_input})
         if len(app.memory[device_id]) > 200:
             app.memory[device_id] = app.memory[device_id][-200:]
         _write_memory_file(app.memory)
 
+    # ---------- GEMINI API ----------
     reply = "No reply"
     if not API_KEY:
         reply = "Error: Missing Gemini API key."
@@ -215,6 +230,7 @@ def api():
             logger.exception("Error during Gemini request: %s", e)
             reply = f"Error contacting Gemini: {e}"
 
+    # Save AI reply
     with memory_lock:
         app.memory.setdefault(device_id, []).append({"sender": "AI", "text": reply})
         _write_memory_file(app.memory)
@@ -250,6 +266,7 @@ def history_page():
         logger.exception("Error loading history: %s", e)
         return f"<p style='color:red'>Error loading history: {e}</p>"
 
+# ---------- MAIN ----------
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     logger.info("Server running on http://0.0.0.0:%d", port)
