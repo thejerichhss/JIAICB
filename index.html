@@ -9,7 +9,6 @@
 <script src="https://cdn.jsdelivr.net/npm/dompurify@2.4.0/dist/purify.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
 <style>
-  /* Compact, consistent chat bubbles */
   .message {
     display: block;
     max-width: 56%;
@@ -27,13 +26,11 @@
     color: inherit;
   }
 
-  /* Fade-in animation */
   .message.show {
     opacity: 1;
     transform: translateY(0);
   }
 
-  /* User bubble: right side */
   .message.user {
     background: #6272a4;
     color: #fff;
@@ -42,7 +39,6 @@
     text-align: left;
   }
 
-  /* AI bubble: left side */
   .message.ai {
     background: #50fa7b;
     color: #111;
@@ -51,7 +47,6 @@
     text-align: left;
   }
 
-  /* System messages */
   .message.system {
     background: transparent;
     color: #ff5555;
@@ -59,7 +54,6 @@
     text-align: left;
   }
 
-  /* Layout */
   :root { --transition: 0.35s ease; }
   body {
     font-family: sans-serif;
@@ -200,7 +194,6 @@
     color: #fff;
   }
 
-  /* Modals */
   #customThemeModal {
     display: none;
     position: fixed;
@@ -253,7 +246,6 @@
     padding: .25rem .5rem;
   }
 
-  /* RIP modal */
   #historyFrame {
     display: none;
     position: fixed;
@@ -279,7 +271,6 @@
     background: #ff5555;
     color: #fff;
   }
-  /* RIP Modal Styling */
 .rip-modal {
   position: fixed;
   z-index: 12000;
@@ -345,7 +336,6 @@
   margin-top: .5rem;
 }
 
-  /* Responsive */
   @media (max-width:600px){
     #searchBar { width: 48%; }
     #customThemeModal { width: 92%; }
@@ -391,7 +381,6 @@
     <button id="importChatBtn" style="background:#50fa7b;color:#111;">Import Chat</button>
     <input id="importChatFile" type="file" accept="application/json" style="display:none">
   </div>
-<!-- RIP Modal -->
 <div id="ripModal" class="rip-modal" style="display:none;">
   <div class="rip-content">
     <span id="closeRip" class="rip-close">&times;</span>
@@ -425,7 +414,6 @@
   </div>
 </div>
 
-  <!-- Custom Theme Modal -->
   <div id="customThemeModal" role="dialog" aria-hidden="true">
     <h3>Custom Theme Creator</h3>
 
@@ -457,15 +445,12 @@
     </div>
   </div>
 <script>
-// -------------------- Markdown setup --------------------
 marked.setOptions({ gfm: true, breaks: true });
 
-// -------------------- Initialization --------------------
 if (!localStorage.getItem("deviceId"))
   localStorage.setItem("deviceId", crypto.randomUUID());
 const deviceId = localStorage.getItem("deviceId");
 
-// Elements
 const chat = document.getElementById("chat");
 const promptEl = document.getElementById("prompt");
 const sendBtn = document.getElementById("sendBtn");
@@ -478,7 +463,6 @@ const importChatBtn = document.getElementById("importChatBtn");
 const importChatFile = document.getElementById("importChatFile");
 const ripBtn = document.getElementById("ripBtn");
 
-// Custom Theme modal
 const customThemeModal = document.getElementById("customThemeModal");
 const bgColor = document.getElementById("bgColor");
 const chatBgColor = document.getElementById("chatBgColor");
@@ -493,7 +477,6 @@ const importThemeFile = document.getElementById("importThemeFile");
 const closeThemeBtn = document.getElementById("closeTheme");
 const customThemeList = document.getElementById("customThemeList");
 
-// RIP modal
 const ripModal = document.getElementById("ripModal");
 const closeRip = document.getElementById("closeRip");
 const ripTabs = document.querySelectorAll(".rip-tab");
@@ -502,7 +485,6 @@ const creditsSection = document.getElementById("creditsSection");
 const versionSection = document.getElementById("versionSection");
 const versionInfoEl = document.getElementById("versionInfo");
 
-// -------------------- State --------------------
 let chatHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
 let currentTheme = localStorage.getItem("theme") || "dark";
 let typingEl = null;
@@ -522,13 +504,11 @@ const themes = {
   custom: null
 };
 
-// -------------------- Utilities --------------------
 function escapeHtml(s) {
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 function smoothScroll() { chat.scrollTo({ top: chat.scrollHeight, behavior: "smooth" }); }
 
-// -------------------- Rendering --------------------
 function renderMessageElement(sender, text, cls, time) {
   const msg = document.createElement("div");
   msg.className = `message ${cls}`;
@@ -579,7 +559,6 @@ function addMessage(sender, text, cls, save = true) {
   smoothScroll();
 }
 
-// -------------------- Typing --------------------
 function showTyping() {
   if (typingEl) return;
   const t = themes[currentTheme] || themes.dark;
@@ -596,7 +575,6 @@ function showTyping() {
 }
 function hideTyping() { if (typingEl) { typingEl.remove(); typingEl = null; } }
 
-// -------------------- Themes --------------------
 function applyTheme(name, options = {}) {
   const t = (name === "custom") ? (themes.custom || options) : (themes[name] || themes.dark);
   if (!t) return;
@@ -612,7 +590,6 @@ function applyTheme(name, options = {}) {
   themeMenu.value = name;
 }
 
-// -------------------- Message sending --------------------
 async function sendMessage() {
   const text = promptEl.value.trim();
   if (!text) return;
@@ -635,10 +612,8 @@ promptEl.addEventListener("keydown", e => {
     e.preventDefault(); // prevent newline
     sendMessage();
   }
-  // If Shift+Enter, do nothing (browser will insert newline)
 });
 
-// -------------------- Clear memory --------------------
 clearBtn.onclick = async () => {
   if (!confirm("Clear memory?")) return;
   try { await fetch(`/api?clear=true&device=${deviceId}`); } catch {}
@@ -648,7 +623,6 @@ clearBtn.onclick = async () => {
   addMessage("System", "Memory cleared.", "system", false);
 };
 
-// -------------------- Search --------------------
 searchBar.addEventListener("input", e => {
   const q = e.target.value.trim().toLowerCase();
   Array.from(chat.children).forEach(node => {
@@ -657,7 +631,6 @@ searchBar.addEventListener("input", e => {
   });
 });
 
-// -------------------- Theme selector --------------------
 themeMenu.onchange = e => {
   const v = e.target.value;
   if (v === "custom") {
@@ -668,7 +641,6 @@ themeMenu.onchange = e => {
   }
 };
 
-// -------------------- Custom Theme Modal --------------------
 function openThemeModal() {
   customThemeModal.setAttribute("aria-hidden", "false");
 }
@@ -705,7 +677,6 @@ saveThemeBtn.onclick = () => {
   alert("Custom theme saved!");
 };
 
-// Export / Import themes
 exportThemeBtn.onclick = () => {
   const custom = JSON.parse(localStorage.getItem("customTheme") || "{}");
   const blob = new Blob([JSON.stringify(custom, null, 2)], { type: "application/json" });
@@ -734,7 +705,6 @@ importThemeFile.onchange = e => {
   reader.readAsText(file);
 };
 
-// -------------------- RIP modal --------------------
 ripBtn.onclick = () => {
   ripModal.style.display = "block";
   logsSection.innerHTML = "<p>Session started at: " + new Date().toLocaleString() + "</p>";
@@ -763,12 +733,10 @@ viewHistoryBtn.addEventListener("click", () => {
     viewHistoryBtn.textContent = "View Server History";
   }
 });
-// Close when clicking outside modal content
 window.addEventListener("click", e => {
   if (e.target === ripModal) ripModal.style.display = "none";
 });
 
-// -------------------- Export / Import Chat --------------------
 exportChatBtn.onclick = () => {
   const blob = new Blob([JSON.stringify(chatHistory, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -797,7 +765,6 @@ importChatFile.onchange = e => {
   reader.readAsText(file);
 };
 
-// -------------------- Load history and theme --------------------
 chatHistory.forEach(m => renderMessageElement(m.sender, m.text, m.cls, m.time));
 if (localStorage.getItem("customTheme")) {
   themes.custom = JSON.parse(localStorage.getItem("customTheme"));
