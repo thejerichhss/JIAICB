@@ -7,3 +7,4 @@
 ● Markdown Support - Yes, you read that right, JIAICB has MD Support! Now you don’t see those annoying symbols in your text, it actually changes it to it’s MD counterpart! (bold, italic, crossed out etc.)
 (There is also the shift+enter key bind to make a newline without sending the whole text, plus the RIP modal that shows the version, credits, and system logs.)
 
+(Disclaimer: **GEMINI IS PROPERTY OF Google.** *I cannot and will not take any responsibilities for the misuse of this program.*)
